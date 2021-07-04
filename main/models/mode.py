@@ -36,6 +36,7 @@ class NodeInfo(db.Model):
     node_domain = db.Column(db.String(255))
     node_encryption_key = db.Column(db.String(255))
     node_region = db.Column(db.String(255))
+    node_usernumber = db.Column(db.INTEGER, default=0)
     node_db = db.Column(db.String(255))
 
 

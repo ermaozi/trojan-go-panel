@@ -174,6 +174,11 @@ class SetUser(MethodView):
         } for node in del_list]
         user_node_api.del_user_node(del_data_list)
 
+        for node in del_data_list+insert_data_list:
+            node_name = node["node_name"]
+            node_usernumber = len(user_node_api.get_username_for_nodename(node_name))
+            node_api.set_node_usernumber(node_name, node_usernumber)
+
         return jsonify({"code": 200, "data": {}})
 
 
@@ -260,7 +265,6 @@ class Subscribe(MethodView):
                 nodes_str = "\n".join(trojan_urls)
                 content = base64.b64encode(nodes_str.encode("utf-8"))
             except Exception as e:
-                print(e)
                 return "错误"
         else:
             content = create_random_str(40, 100)

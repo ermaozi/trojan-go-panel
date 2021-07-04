@@ -53,18 +53,16 @@ class DBApi():
 
         results = cur.fetchall()  # 获取查询的所有记录
         # 遍历结果
-        print(results)
 
     def insert_user(self, username, password):
 
         # 1.查询操作
         password = sha224(password.encode()).hexdigest()
-        sql = "select password from users"
+        sql = "select password from users;"
         self.cur.execute(sql)  # 执行sql语句
 
         results = [i[0] for i in self.cur.fetchall() if i]
         if password in results:
-            print("错误")
             return "错误"
         sql = f'insert into users (username,password,quota) value ("{username}","{password}",-1);'
         self.cur.execute(sql)  # 执行sql语句

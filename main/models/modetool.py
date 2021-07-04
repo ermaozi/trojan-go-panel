@@ -1,4 +1,4 @@
-from main.models.mode import *
+from main.models.mode import db
 
 __all__ = ["creat_db", "Database"]
 

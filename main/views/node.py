@@ -43,11 +43,12 @@ class GetNodeInfo(MethodView):
 
 class GetNodeStatus(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
-    def get(self):
-        args = request.args
+    def post(self):
+        datas = request.get_data()
+        datas = json.loads(datas.decode("UTF-8"))
         thread_list = []
-        for i in args:
-            domain = args[i]
+        for i in datas:
+            domain = i["node_domain"]
             thread_list.append(ThreadApi(get_node_info, domain))
         for t in thread_list:
             t.start()
@@ -64,12 +65,12 @@ def get_node_info(domain):
         if hw_info.status_code == 200:
             data["node_status"]["status"] = "success"
             data["node_status"]["info"] = "正常"
-            data["node_status"]["msg"] = hw_info.status_code
+            data["node_status"]["msg"] = "正常"
             data.update(json.loads(hw_info.text))
         else:
             data["node_status"]["status"] = "error"
             data["node_status"]["info"] = "异常"
-            data["node_status"]["msg"] = ""
+            data["node_status"]["msg"] = "节点连接异常"
     except Exception as e:
         data["node_status"]["status"] = "error"
         data["node_status"]["info"] = "异常"

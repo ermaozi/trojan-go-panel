@@ -65,6 +65,10 @@ class UserNodesTable(object):
     def get_node_info_for_user_name(self, user_name):
         return self.db.select({"user_name": user_name})
 
+    def get_username_for_nodename(self, node_name):
+        nodes = self.db.select({"node_name": node_name}, ["user_name"])
+        return [i["user_name"] for i in nodes]
+
     def add_user_node(self, data_list):
         for data in data_list:
             node_name = data["node_name"]
@@ -79,7 +83,7 @@ class UserNodesTable(object):
             node_name = data["node_name"]
             user_name = data["user_name"]
             with DBApi(node_name) as db:
-                sql = f"delete from users where username={user_name}"
+                sql = f'delete from users where username="{user_name}";'
                 db.cur.execute(sql)  # 执行sql语句
                 db.db.commit()
             self.db.delete(data)
@@ -135,7 +139,12 @@ class NodeInfoTable(object):
         self.db.delete({"node_domain": node_domain})
 
     def get_all_node_list(self):
-        return self.db.select({}, ["node_name", "node_domain", "node_region"])
+        return self.db.select({},
+            ["node_name", "node_domain", "node_region", "node_usernumber"])
 
     def get_node_for_nodename(self, node_name):
         return self.db.select({"node_name": node_name})[0]
+
+    def set_node_usernumber(self, node_name, usernumber):
+        self.db.update({"node_name": node_name},
+            {"node_usernumber": usernumber})

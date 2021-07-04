@@ -48,15 +48,3 @@ def create_token(data):
     s = Serializer(current_app.config["SECRET_KEY"], expires_in=3600)
     token = s.dumps(data).decode("ascii")
     return token
-
-
-# def verify_token(token):
-#     # 参数为私有秘钥，跟上面方法的秘钥保持一致
-#     s = Serializer(current_app.config["SECRET_KEY"])
-#     try:
-#         # 转换为字典
-#         data = s.loads(token)
-#         print(data)
-#     except Exception:
-#         return None
-#     return data
