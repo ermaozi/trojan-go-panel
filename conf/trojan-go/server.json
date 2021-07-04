@@ -1,0 +1,33 @@
+{
+    "run_type": "server",
+    "local_addr": "0.0.0.0",
+    "local_port": 443,
+    "remote_addr": "127.0.0.1",
+    "remote_port": 80,
+    "log_level": 1,
+    "log_file": "/var/log/trojan.log",
+    "password": [],
+    "ssl": {
+        "cert": "cert_path",
+        "key": "key_path"
+    },
+    "mysql": {
+      "enabled": true,
+      "server_addr": "mysql_server_addr",
+      "server_port": 3306,
+      "database": "mysql_database",
+      "username": "root",
+      "password": "mysql_password",
+      "check_rate": 60
+    },
+    "websocket": {
+        "enabled": false,
+        "path": "/qazxswedcvfr",
+        "host": "domain_name"
+    },
+    "mux": {
+        "enabled": true,
+        "concurrency": 8,
+        "idle_timeout": 60
+    }
+}
