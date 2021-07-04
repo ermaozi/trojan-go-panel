@@ -65,10 +65,6 @@ checkSys() {
 
     echo "开始安装依赖, 若本系统是初次更新, 将会花费更长的时间. 请耐心等候..."
 
-    if [[ ${PACKAGE_MANAGER} != 'apt-get' ]];then
-        ${PACKAGE_MANAGER} install -y epel-release
-        ${PACKAGE_MANAGER} install -y xz-utils
-    fi
     ${PACKAGE_MANAGER} install -y socat
     ${PACKAGE_MANAGER} install -y lsof
     ${PACKAGE_MANAGER} install -y tar
@@ -77,10 +73,21 @@ checkSys() {
     ${PACKAGE_MANAGER} install -y unzip
     ${PACKAGE_MANAGER} install -y git
     ${PACKAGE_MANAGER} install -y python3
+    ${PACKAGE_MANAGER} install -y gcc
+    if [[ ${PACKAGE_MANAGER} != 'apt-get' ]];then
+        ${PACKAGE_MANAGER} install -y epel-release
+        ${PACKAGE_MANAGER} install -y xz-utils
+        ${PACKAGE_MANAGER} install -y 'Development Tools'  # 安装开发套件, 支撑软件运行环境
+        ${PACKAGE_MANAGER} install -y openssl-devel bzip2-devel libffi-devel  # 安装编译套件, 部分属于历史遗留问题, 后期会酌情删减
+        ${PACKAGE_MANAGER} install -y python36-devel  # uwsgi 的依赖, 必须要装, 否则可能导致 uwsgi 无法安装
+    else
+        ${PACKAGE_MANAGER} install -y python3-venv
+        ${PACKAGE_MANAGER} install -y build-essential
+        ${PACKAGE_MANAGER} install -y libncurses5-dev libncursesw5-dev libreadline6-dev
+        ${PACKAGE_MANAGER} install -y libgdbm-dev libsqlite3-dev libssl-dev
+        ${PACKAGE_MANAGER} install -y libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev
+    fi
 
-    ${PACKAGE_MANAGER} install -y 'Development Tools'  # 安装开发套件, 支撑软件运行环境
-	${PACKAGE_MANAGER} install -y gcc openssl-devel bzip2-devel libffi-devel  # 安装编译套件, 部分属于历史遗留问题, 后期会酌情删减
-	${PACKAGE_MANAGER} install -y python36-devel  # uwsgi 的依赖, 必须要装, 否则可能导致 uwsgi 无法安装
 
 }
 

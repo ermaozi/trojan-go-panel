@@ -7,6 +7,18 @@ trojan-go 多用户多节点管理面板
 
 ## 部署
 
+部署之前建议先更新包仓库
+
+`yum update||apt-get update`
+
+### 已通过测试的系统
+
+- CentOS 7 64 Bit
+
+### 暂不支持的系统
+
+- Debian
+
 ### 主节点部署
 
 `source <(curl -sL https://git.io/install-trojan)`
