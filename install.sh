@@ -121,6 +121,7 @@ installPanel(){
 
     mkdir -p /var/log/main/uwsgi/
     mkdir -p /var/log/nginx/
+    mkdir -p /etc/nginx/
 
     git clone https://github.com/ermaozi/trojan-go-panel.git
     cd trojan-go-panel/
@@ -137,8 +138,6 @@ installPanel(){
         pip install -r requirements_worknode.txt
         uwsgi --ini ./conf/uwsgi/uwsgi-worknode.ini
     fi
-
-
 
     CONFIGDIR=$(cd conf/;pwd)
 
@@ -228,10 +227,10 @@ run(){
 main(){
     cd "/root"
     checkSys || return
-    installPanel || return
     if [[ $worknode != 1 ]];then
         installMaria || return
     fi
+    installPanel || return
     installTls || return
     installTrojanGo || return
     run || return
