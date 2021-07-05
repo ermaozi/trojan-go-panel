@@ -28,6 +28,6 @@ jobs = [{
     'id': 'check_user',
     'func': check_user,
     'trigger': 'cron',
-    'hour': 21,
-    'minute': 33
+    'hour': 0,
+    'minute': 30
 }]

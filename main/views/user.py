@@ -192,12 +192,14 @@ class SetUser(MethodView):
         } for node in del_list]
         user_node_api.del_user_node(del_data_list)
 
-        for node in del_data_list+insert_data_list:
+        all_set_node = del_data_list+insert_data_list
+
+        for node in all_set_node:
             node_name = node["node_name"]
             node_usernumber = len(user_node_api.get_username_for_nodename(node_name))
             node_api.set_node_usernumber(node_name, node_usernumber)
-
-        check_user(user_name)
+        if all_set_node:
+            check_user(user_name)
 
         return jsonify({"code": 200, "data": {}})
 
