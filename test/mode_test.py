@@ -12,7 +12,7 @@ from main.models.modetool import *
 from main.models.mode import *
 from main.libs.db_api import *
 
-config = 'conf.flask.config.DevelopmentConfig'
+config = 'conf.flask.config.TestingConfig'
 
 app = Flask(__name__)
 
@@ -32,7 +32,7 @@ def random_str(num, userstr=""):
 class TestModeTools(unittest.TestCase):
     def test_001_create_db(self):
         with app.app_context():
-            creat_db()
+            create_db()
 
     def test_002_modeapi(self):
         with app.app_context():

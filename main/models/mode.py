@@ -6,8 +6,7 @@ import datetime
 
 class User(db.Model):
     __tablename__ = 'user'
-    id = db.Column(db.INTEGER, primary_key=True)
-    username = db.Column(db.String(80))
+    username = db.Column(db.String(80), primary_key=True)
     _password_hash_ = db.Column(db.String(255))
     quota = db.Column(db.INTEGER, default=-1)
     expiry_date = db.Column(db.DateTime, default=None)
@@ -31,13 +30,13 @@ class User(db.Model):
 
 class NodeInfo(db.Model):
     __tablename__ = 'node_info'
-    id = db.Column(db.INTEGER, primary_key=True)
-    node_name = db.Column(db.String(255))
+    node_name = db.Column(db.String(255), primary_key=True)
     node_domain = db.Column(db.String(255))
     node_encryption_key = db.Column(db.String(255))
     node_region = db.Column(db.String(255))
     node_usernumber = db.Column(db.INTEGER, default=0)
     node_db = db.Column(db.String(255))
+    required_permissions = db.Column(db.INTEGER, default=1)
 
 
 class UserNods(db.Model):

@@ -1,29 +1,30 @@
-import os
-import sys
-
 from flask.app import Flask
 from flask_cors import CORS
 
-# sys.path.append(os.path.realpath(__file__ + "/.."))
-
 from main.models.exts import bcrypt, db
-from main.models.modetool import creat_db
+from main.models.modetool import create_db
 from main.urls.main import init_url
 
-# config = 'conf.flask.config.ProductionConfig'
-config = 'conf.flask.config.DevelopmentConfig'
 
-app = Flask(__name__, static_folder="./web/static", template_folder="./web")
-CORS(app)
+def create_app(config_path):
+    app = Flask(__name__,
+                static_folder="./web/static",
+                template_folder="./web")
+    CORS(app)
 
-app.config.from_object(config)
+    app.config.from_object(config_path)
 
-db.init_app(app)
-bcrypt.init_app(app)
+    db.init_app(app)
+    bcrypt.init_app(app)
 
-with app.app_context():
-    creat_db()
-    init_url(app)
+    with app.app_context():
+        create_db()
+        init_url(app)
+    return app
+
 
 if __name__ == '__main__':
+    app = create_app("conf.flask.config.DevelopmentConfig")
     app.run(host="0.0.0.0", port=8000)
+else:
+    app = create_app("conf.flask.config.ProductionConfig")

@@ -3,7 +3,7 @@ import os
 try:
     from conf.flask.private.private import *
 except ModuleNotFoundError:
-    private_dir = os.path.realpath(os.path.join(__file__+"/../private/"))
+    private_dir = os.path.realpath(os.path.join(__file__ + "/../private/"))
     msg = f"\n为了安全起见, 本项目需要自行创建 private.py 文件\n"\
           f"\n请手动将\n  {private_dir+'private_template.py'}\n复制到\n"\
           f"  {private_dir+'private.py'}\n\n"\
@@ -17,11 +17,13 @@ class ProductionConfig(PriProduction):
     DEBUG = False
     MAIL_DEBUG = False
 
-class DevelopmentConfig(PriDevelopment):
-    DEBUG = True
-    MAIL_DEBUG = True
 
 class TestingConfig(PriTesting):
     DEBUG = True
     TESTING = True
+    MAIL_DEBUG = True
+
+
+class DevelopmentConfig(PriDevelopment):
+    DEBUG = True
     MAIL_DEBUG = True

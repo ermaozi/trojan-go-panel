@@ -130,7 +130,8 @@ installPanel(){
     if [[ $worknode != 1 ]];then
         pip install -r requirements_manage.txt
         cp conf/flask/private/private_template.py conf/flask/private/private.py
-        sed -i "s#DEV-PASSWORD#$mysql_password#" conf/flask/private/private.py
+        sed -i "s#PRO-PASSWORD#$mysql_password#" conf/flask/private/private.py
+        sed -i "s#MANAGE-DOMAIN#$DOMAIN#" conf/flask/private/private.py
         sed -i "s#flask_secret_key#$(cat /proc/sys/kernel/random/uuid)#" conf/flask/private/private.py
         sed -i "s#http://127.0.0.1:8000#http://$DOMAIN#" web/static/config.js
         uwsgi --ini ./conf/uwsgi/uwsgi-manage.ini

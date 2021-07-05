@@ -57,9 +57,6 @@ class Login(MethodView):
             }
         return jsonify(ret)
 
-    def get(self):
-        return render_template("login.html")
-
 
 class Logout(MethodView):
     def post(self):

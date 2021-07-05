@@ -1,4 +1,4 @@
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from flask.views import MethodView
 from main.libs.db_api import NodeInfoTable
 from main.libs.threading_api import ThreadApi
@@ -25,7 +25,10 @@ class AddNode(MethodView):
         ret, msg = node_api.add_node(**data)
 
         if ret:
-            return jsonify({'code': 200, 'data': ""})
+            rep = f"source <(curl -sL https://git.io/install-trojan)"\
+                  f" --worknode {data['']} {current_app.config['DOMAIN']}"\
+                  f" {data['']} 主节点数据库密码"
+            return jsonify({'code': 200, 'data': rep})
         else:
             return jsonify({'code': 500, 'data': msg})
 

@@ -1,9 +1,9 @@
 from main.models.mode import db
 
-__all__ = ["creat_db", "Database"]
+__all__ = ["create_db", "Database"]
 
 
-def creat_db():
+def create_db():
     db.create_all()
 
 
