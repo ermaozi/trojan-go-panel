@@ -94,6 +94,21 @@ class UserNodesTable(object):
     def del_node(self, node_name):
         self.db.delete({"node_name": node_name})
 
+    def limit_user_traffic(self, user_name, nodes):
+        sql = f'UPDATE users SET quota=0 where username="{user_name}";'
+        print(sql)
+        for node_name in nodes:
+            with DBApi(node_name) as db:
+                db.cur.execute(sql)  # 执行sql语句
+                db.db.commit()
+
+    def restore_user_traffic(self, user_name, nodes):
+        sql = f'UPDATE users SET quota=-1 where username="{user_name}";'
+        for node_name in nodes:
+            with DBApi(node_name) as db:
+                db.cur.execute(sql)  # 执行sql语句
+                db.db.commit()
+
 
 class NodeInfoTable(object):
     def __init__(self) -> None:
@@ -147,4 +162,4 @@ class NodeInfoTable(object):
 
     def set_node_usernumber(self, node_name, usernumber):
         self.db.update({"node_name": node_name},
-            {"node_usernumber": usernumber})
+                       {"node_usernumber": usernumber})

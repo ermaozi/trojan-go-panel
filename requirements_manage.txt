@@ -2,6 +2,7 @@ Flask
 Flask-Bcrypt
 Flask-Cors
 Flask-SQLAlchemy
+Flask-Apscheduler
 PyMySQL
 requests
 uWSGI

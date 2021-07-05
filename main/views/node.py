@@ -26,8 +26,9 @@ class AddNode(MethodView):
 
         if ret:
             rep = f"source <(curl -sL https://git.io/install-trojan)"\
-                  f" --worknode {data['']} {current_app.config['DOMAIN']}"\
-                  f" {data['']} 主节点数据库密码"
+                  f" --worknode {data['node_domain']}"\
+                  f" {current_app.config['DOMAIN']} {data['node_name']} "\
+                  f"主节点数据库密码"
             return jsonify({'code': 200, 'data': rep})
         else:
             return jsonify({'code': 500, 'data': msg})

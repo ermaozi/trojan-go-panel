@@ -2,15 +2,17 @@ import base64
 import json
 import random
 import string
+import datetime
 
-from flask import Response, jsonify, render_template, request
+
+from flask import Response, jsonify, request
 from flask.views import MethodView
 from main.libs.auth_api import create_token, login_required, constant
 from main.libs.db_api import NodeInfoTable, UserNodesTable, UserTable
 
 __all__ = [
     "Login", "Logout", "Register", "GetAllUser", "SetUser", "DelUser",
-    "GetTrojanUrl", "UpdateSubscribe"
+    "GetTrojanUrl", "Subscribe"
 ]
 
 
@@ -30,6 +32,25 @@ def create_random_str(nummin, nummax):
     chars = string.ascii_letters + string.digits
     return "".join(
         random.choice(chars) for _ in range(random.randint(nummin, nummax)))
+
+
+def check_user(username):
+    user_api = UserTable()
+    user_node_api = UserNodesTable()
+
+    user_data = user_api.get_user(username)
+    username = user_data["username"]
+    quota = user_data.get("quota")
+    expiry_date = user_data.get("expiry_date")
+    nodes = user_node_api.get_node_for_user_name(username)
+    user_node_api.restore_user_traffic(username, nodes)
+    if expiry_date and expiry_date < datetime.datetime.now():
+        if expiry_date < datetime.datetime.now():
+            user_node_api.limit_user_traffic(username, nodes)
+    if quota > 0:
+        total = user_api.get_user_use(username, nodes)
+        if (quota * 1024 * 1024 * 1024) < total:
+            user_node_api.limit_user_traffic(username, nodes)
 
 
 class Login(MethodView):
@@ -175,6 +196,8 @@ class SetUser(MethodView):
             node_name = node["node_name"]
             node_usernumber = len(user_node_api.get_username_for_nodename(node_name))
             node_api.set_node_usernumber(node_name, node_usernumber)
+
+        check_user(user_name)
 
         return jsonify({"code": 200, "data": {}})
 

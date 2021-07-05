@@ -1,3 +1,5 @@
+from main.libs.task import jobs
+
 """
     警告:
         本文件内所有内容均属于敏感信息
@@ -25,6 +27,7 @@ class Base(object):
     MAIL_USERNAME = "admin@ermao.net"  # 邮箱账户
     MAIL_PASSWORD = ""  # 邮箱密码或授权码
 
+    JOBS = jobs
 
 class PriProduction(Base):
     """

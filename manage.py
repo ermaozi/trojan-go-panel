@@ -1,7 +1,8 @@
 from flask.app import Flask
 from flask_cors import CORS
+from flask_apscheduler import APScheduler
 
-from main.models.exts import bcrypt, db
+from main.models.exts import bcrypt, db, scheduler
 from main.models.modetool import create_db
 from main.urls.main import init_url
 
@@ -20,6 +21,10 @@ def create_app(config_path):
     with app.app_context():
         create_db()
         init_url(app)
+
+    scheduler.init_app(app)
+    scheduler.start()
+
     return app
 
 
