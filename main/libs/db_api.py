@@ -8,14 +8,8 @@ class UserTable(object):
     def __init__(self) -> None:
         self.db = Database(User)
 
-    def add_user(self, username, password, subscribe_pwd="", user_permission=0):
-        db_data = {
-            "username": username,
-            "password": password,
-            "user_permission": user_permission,
-            "subscribe_pwd": subscribe_pwd
-        }
-        self.db.insert(db_data)
+    def add_user(self, data):
+        self.db.insert(data)
 
     def get_user(self, username):
         return self.db.select({"username": username})[0]
@@ -27,7 +21,7 @@ class UserTable(object):
         self.db.delete({"username": username})
 
     def verify_user(self, username, password):
-        fucking_time = 10
+        fucking_time = 300
         fucking_numb = 5
         usr = db.session.query(User).filter_by(username=username).first()
         if usr:
@@ -38,7 +32,7 @@ class UserTable(object):
             is_ok = usr.check_password(password)
             if is_ok:
                 self.db.update({"username": username},
-                                {"num_of_fail": 0,
+                               {"num_of_fail": 0,
                                 "login_time": datetime.now()})
                 return usr.check_password(password), usr.username
             else:
@@ -135,28 +129,24 @@ class NodeInfoTable(object):
     def __init__(self) -> None:
         self.db = Database(NodeInfo)
 
-    def add_node(self, node_name, node_domain, node_encryption_key,
-                 node_region):
-        db_data = {
-            "node_name": node_name,
-            "node_domain": node_domain,
-            "node_encryption_key": node_encryption_key,
-            "node_region": node_region,
-            "node_db": node_name
-        }
+    def add_node(self, data):
+
+        if data.get("node_db"):
+            data["node_db"] = data["node_name"]  # 临时先用这个
+
         node_list = self.db.select({}, ["node_name", "node_domain"])
         node_name_list = [node.get("node_name") for node in node_list]
         node_domain_list = [node.get("node_domain") for node in node_list]
-        if node_name in node_name_list:
-            return False, f"节点名称{node_name}已存在!"
-        if node_domain in node_domain_list:
-            return False, f"域名{node_domain}已存在!"
-        self.db.insert(db_data)
+        if data["node_name"] in node_name_list:
+            return False, f'节点名称{data["node_name"]}已存在!'
+        if data["node_domain"] in node_domain_list:
+            return False, f'域名{data["node_domain"]}已存在!'
+        self.db.insert(data)
 
         with DBApi() as db:
-            sql = f"create database {node_name}"
+            sql = f'create database {data["node_name"]}'
             db.cur.execute(sql)
-        with DBApi(node_name) as db:
+        with DBApi(data["node_name"]) as db:
             sql = """CREATE TABLE users (
                     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
                     username VARCHAR(64) NOT NULL,

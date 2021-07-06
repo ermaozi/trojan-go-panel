@@ -12,8 +12,7 @@ from main.libs.db_api import NodeInfoTable, UserNodesTable, UserTable
 from main.libs.log import log
 
 __all__ = [
-    "Login", "Logout", "Register", "GetAllUser", "SetUser", "DelUser",
-    "GetTrojanUrl", "Subscribe"
+    "Login", "Logout", "User", "GetTrojanUrl", "Subscribe"
 ]
 
 
@@ -89,7 +88,7 @@ class Logout(MethodView):
         pass
 
 
-class Register(MethodView):
+class User(MethodView):
     def post(self):
         user_api = UserTable()
         data = request.get_data()
@@ -97,20 +96,20 @@ class Register(MethodView):
         try:
             username = data.get("username")
             if user_api.username_if_exist(username):
-                raise Exception("用户名")
+                raise Exception("用户名重复, 请重新输入")
             user_data = data
             if not user_api.get_all_user():
                 # 首个账号默认为创建人
                 user_data["user_permission"] = constant.PERMISSION_LEVEL_100
             subscribe_pwd = create_random_str(8, 16)
             user_data["subscribe_pwd"] = subscribe_pwd
-            user_api.add_user(**user_data)
+            user_api.add_user(user_data)
+            log.info("user", f"{username} 成功注册用户")
             return jsonify({'code': 200, 'data': {}})
         except Exception as err:
-            return jsonify({'code': 500, 'message': str(err)})
+            log.error("user", f"{username} 注册失败{str(err)}{user_data}")
+            return jsonify({'code': 400, 'message': str(err)})
 
-
-class GetAllUser(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
     def get(self):
         user_api = UserTable()
@@ -150,10 +149,8 @@ class GetAllUser(MethodView):
         }
         return jsonify(ret)
 
-
-class SetUser(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
-    def post(self):
+    def put(self):
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
         user_name = data["username"]
@@ -208,10 +205,8 @@ class SetUser(MethodView):
 
         return jsonify({"code": 200, "data": {}})
 
-
-class DelUser(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
-    def post(self):
+    def delete(self):
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
         user_name = data["username"]

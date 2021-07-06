@@ -22,7 +22,7 @@ class AddNode(MethodView):
         data = json.loads(data.decode("UTF-8"))
         data["node_encryption_key"] = str(
             uuid.uuid5(uuid.NAMESPACE_DNS, data.get("node_name")))
-        ret, msg = node_api.add_node(**data)
+        ret, msg = node_api.add_node(data)
 
         if ret:
             rep = f"source <(curl -sL https://git.io/install-trojan)"\
