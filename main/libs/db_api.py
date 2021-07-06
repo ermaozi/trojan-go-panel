@@ -111,7 +111,6 @@ class UserNodesTable(object):
 
     def limit_user_traffic(self, user_name, nodes):
         sql = f'UPDATE users SET quota=0 where username="{user_name}";'
-        print(sql)
         for node_name in nodes:
             with DBApi(node_name) as db:
                 db.cur.execute(sql)  # 执行sql语句

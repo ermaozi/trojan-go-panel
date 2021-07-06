@@ -5,7 +5,7 @@ from main.views.node import AddNode, GetNodeStatus, GetNodeInfo
 
 def init_url(app):
     app.add_url_rule('/', view_func=Index.as_view('index'))
-    app.add_url_rule('/user/login', view_func=Login.as_view('login'))
+    app.add_url_rule('/login', view_func=Login.as_view('login'))
     app.add_url_rule('/user/user', view_func=User.as_view('register'))
     app.add_url_rule('/user/subscribe', view_func=Subscribe.as_view('subscribe'))
     app.add_url_rule('/user/get_trojan_url',

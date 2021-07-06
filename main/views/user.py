@@ -5,7 +5,7 @@ import string
 import datetime
 
 
-from flask import Response, jsonify, request
+from flask import Response, jsonify, request, render_template
 from flask.views import MethodView
 from main.libs.auth_api import create_token, login_required, constant
 from main.libs.db_api import NodeInfoTable, UserNodesTable, UserTable
@@ -81,6 +81,9 @@ class Login(MethodView):
             }
             log.info("user", f"{username} 登录失败:'{msg}' 使用ip:{request.remote_addr}")
         return jsonify(ret)
+
+    def get(self):
+        return render_template("index.html")
 
 
 class Logout(MethodView):
