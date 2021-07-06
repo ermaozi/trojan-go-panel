@@ -9,6 +9,7 @@ from flask import Response, jsonify, request
 from flask.views import MethodView
 from main.libs.auth_api import create_token, login_required, constant
 from main.libs.db_api import NodeInfoTable, UserNodesTable, UserTable
+from main.libs.log import log
 
 __all__ = [
     "Login", "Logout", "Register", "GetAllUser", "SetUser", "DelUser",
@@ -61,7 +62,9 @@ class Login(MethodView):
         username = data.get('username')
         password = data.get('password')
 
-        check_result, username = user_api.verify_user(username, password)
+        check_result, msg = user_api.verify_user(username, password)
+
+        log.info("user", f"{username} 尝试登录 使用ip:{request.remote_addr}")
 
         if check_result:
             ret = {
@@ -71,11 +74,13 @@ class Login(MethodView):
                     'username': username
                 }
             }
+            log.info("user", f"{username} 登录成功 使用ip:{request.remote_addr}")
         else:
             ret = {
                 'code': 401,
-                'message': 'Account and password are incorrect.'
+                'message': msg
             }
+            log.info("user", f"{username} 登录失败:'{msg}' 使用ip:{request.remote_addr}")
         return jsonify(ret)
 
 
@@ -240,7 +245,8 @@ class GetTrojanUrl(MethodView):
             node_name = node_info["node_name"]
             node = node_api.get_node_for_nodename(node_name)
             node_domain = node["node_domain"]
-            trojan_urls.append(f"trojan://{pwd}@{node_domain}:443")
+            node_region = node["node_region"]
+            trojan_urls.append(f"trojan://{pwd}@{node_domain}:443#{node_region}|{node_name}")
         subscribe_pwd = user_api.get_user(user_name)["subscribe_pwd"]
         subscribe_link = ""
         if subscribe_pwd:
@@ -263,6 +269,18 @@ class Subscribe(MethodView):
         user_api.set_user(user_name, {"subscribe_pwd": subscribe_pwd})
         return jsonify({"code": 200, "data": {}})
 
+    def generating_fake_data(self):
+        # ᕕ( ᐛ )ᕗ 如果密码不对, 就返回随机假数据
+        trojan_urls = []
+        for _ in range(random.randint(1, 20)):
+            domain3 = create_random_str(5, 9)
+            domain2 = create_random_str(3, 5)
+            domain1 = random.choice(["com", "net", "org", "xyz", "cc", "fuck", "io"])
+            pwd = create_random_str(5, 9)
+            trojan_urls.append(f"trojan://{pwd}@{domain3}.{domain2}.{domain1}:443")
+        nodes_str = "\n".join(trojan_urls)
+        return base64.b64encode(nodes_str.encode("utf-8"))
+
     def get(self):
         rsp = dict(request.args)
         user_name = rsp["u"]
@@ -272,27 +290,35 @@ class Subscribe(MethodView):
         user_node_api = UserNodesTable()
         node_api = NodeInfoTable()
 
+        content = ""
+
+        if not user_api.username_if_exist(user_name):
+            content = self.generating_fake_data()
+            response = Response(content, content_type="text/plain;charset=utf-8")
+            return response
+
         v_subscribe_pwd = user_api.get_user(user_name)["subscribe_pwd"]
-        if subscribe_pwd == v_subscribe_pwd:
-            try:
-                trojan_urls = []
-                node_info_list = user_node_api.get_node_info_for_user_name(
-                    user_name)
-                for node_info in node_info_list:
-                    pwd = node_info["node_pwd"]
-                    node_name = node_info["node_name"]
-                    node = node_api.get_node_for_nodename(node_name)
-                    node_domain = node["node_domain"]
-                    trojan_urls.append(f"trojan://{pwd}@{node_domain}:443")
-                nodes_str = "\n".join(trojan_urls)
-                content = base64.b64encode(nodes_str.encode("utf-8"))
-            except Exception as e:
-                return "错误"
-        else:
-            content = create_random_str(40, 100)
-            tmp_list = len(content) % 4
-            content += "=" * tmp_list
+
+        if subscribe_pwd != v_subscribe_pwd:
+            content = self.generating_fake_data()
+            response = Response(content, content_type="text/plain;charset=utf-8")
+            return response
+
+        try:
+            trojan_urls = []
+            node_info_list = user_node_api.get_node_info_for_user_name(
+                user_name)
+            for node_info in node_info_list:
+                pwd = node_info["node_pwd"]
+                node_name = node_info["node_name"]
+                node = node_api.get_node_for_nodename(node_name)
+                node_domain = node["node_domain"]
+                node_region = node["node_region"]
+                trojan_urls.append(f"trojan://{pwd}@{node_domain}:443#{node_region}|{node_name}")
+            nodes_str = "\n".join(trojan_urls)
+            content = base64.b64encode(nodes_str.encode("utf-8"))
+        except Exception as e:
+            return "错误"
+
         response = Response(content, content_type="text/plain;charset=utf-8")
-        response.headers[
-            "content-disposition"] = f"attachment;filename={user_name}-subscribe.txt"
         return response

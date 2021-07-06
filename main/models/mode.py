@@ -13,6 +13,8 @@ class User(db.Model):
     user_create_time = db.Column(db.DateTime, default=datetime.datetime.now())
     user_permission = db.Column(db.INTEGER, default=0)
     subscribe_pwd = db.Column(db.String(255), default="")
+    num_of_fail = db.Column(db.INTEGER, default=0)
+    login_time = db.Column(db.DateTime, default=datetime.datetime.now())
 
     @property
     def password(self):

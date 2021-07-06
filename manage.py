@@ -1,6 +1,5 @@
 from flask.app import Flask
 from flask_cors import CORS
-from flask_apscheduler import APScheduler
 
 from main.models.exts import bcrypt, db, scheduler
 from main.models.modetool import create_db

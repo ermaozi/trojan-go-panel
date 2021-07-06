@@ -1,3 +1,4 @@
+from datetime import datetime
 from main.models.mode import User, NodeInfo, UserNods, db
 from main.models.modetool import Database
 from main.libs.local_db import DBApi
@@ -26,10 +27,30 @@ class UserTable(object):
         self.db.delete({"username": username})
 
     def verify_user(self, username, password):
+        fucking_time = 10
+        fucking_numb = 5
         usr = db.session.query(User).filter_by(username=username).first()
         if usr:
-            return usr.check_password(password), usr.username
-        return False, -1
+            sleep_time = fucking_time - (datetime.now() - usr.login_time).seconds
+            if usr.num_of_fail >= fucking_numb and sleep_time > 0:
+                m ,s = divmod(sleep_time, 60)
+                return False, f"账户已被锁定, 请在{m}分{s}秒后重新尝试"
+            is_ok = usr.check_password(password)
+            if is_ok:
+                self.db.update({"username": username},
+                                {"num_of_fail": 0,
+                                "login_time": datetime.now()})
+                return usr.check_password(password), usr.username
+            else:
+                cur_num_of_fail = usr.num_of_fail + 1 if usr.num_of_fail < fucking_numb else usr.num_of_fail
+                self.db.update({"username": username},
+                               {"num_of_fail": cur_num_of_fail,
+                                "login_time": datetime.now()})
+                if cur_num_of_fail >= fucking_numb:
+                    return False, f"密码错误, 账号已被锁定, {fucking_time//60} 分钟后再来吧"
+                return False, f"密码错误, 失败{fucking_numb-cur_num_of_fail}次后账号将被锁定 {fucking_time//60} 分钟"
+        else:
+            return False, "用户不存在"
 
     def get_user_permission(self, username):
         return self.db.select({"username": username},
