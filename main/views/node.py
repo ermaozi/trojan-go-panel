@@ -77,7 +77,7 @@ def get_node_info(domain):
     data = {}
     data["node_status"] = {}
     try:
-        hw_info = requests.get(f'http://{domain}/get_hw_info')
+        hw_info = requests.get(f'http://{domain}/get_hw_info', timeout=5)
         if hw_info.status_code == 200:
             data["node_status"]["status"] = "success"
             data["node_status"]["info"] = "正常"
