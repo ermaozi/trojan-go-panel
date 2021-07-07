@@ -29,14 +29,14 @@ trojan-go 多用户多节点管理面板
 `source <(curl -sL https://git.io/install-trojan) --worknode 子节点域名 主节点域名 子节点名称 主节点数据库密码`
 
 ## 展示
-### 多节点状态查看
-![node_info](./.github/source/node_info.png)
-### 多用户流量查看
+### 多节点管理
+![node](./.github/source/node.png)
+### 多用户管理
 ![user](./.github/source/user.png)
 ### 用户限制以及增删节点
-![edituser](./.github/source/edituser.png)
+![edit-user](./.github/source/edit-user.png)
 ### 查看链接及订阅
-![node](./.github/source/node.png)
+![trojan-url](./.github/source/trojan-url.png)
 
 ## 画大饼
 
