@@ -45,7 +45,7 @@ checkSys() {
             colorEcho $YELLOW "域名不合法"
             exit 1
         fi
-        host_ip=$(curl "http://ipv6.icanhazip.com" 2> /dev/null)
+        host_ip=$(curl "ipinfo.io/ip" 2> /dev/null)
         domain_ip=$(ping -c 2 $input | head -2 | tail -1 | awk '{print $5}' | sed 's/[(:)]//g')
         if [ x"$host_ip" != x"$domain_ip" ];then
             colorEcho $YELLOW "域名解析ip($domain_ip)与本机ip($host_ip)不同! 如果该域名曾配置CND, 请将其关闭"
