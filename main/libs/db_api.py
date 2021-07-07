@@ -160,12 +160,19 @@ class NodeInfoTable(object):
             db.cur.execute(sql)
         return True, ""
 
-    def del_node(self, node_domain):
-        self.db.delete({"node_domain": node_domain})
+    def del_node(self, node_name):
+        """
+        根据数据库名称删除 trojan 数据库
+        """
+        self.db.delete({"node_name": node_name})
+        with DBApi() as db:
+            sql = f'drop database {node_name}'
+            db.cur.execute(sql)
 
     def get_all_node_list(self):
-        return self.db.select({},
-            ["node_name", "node_domain", "node_region", "node_usernumber"])
+        select_list = ["node_name", "node_domain",
+                       "node_region", "node_usernumber"]
+        return self.db.select({}, select_list)
 
     def get_node_for_nodename(self, node_name):
         return self.db.select({"node_name": node_name})[0]

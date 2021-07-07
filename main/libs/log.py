@@ -5,6 +5,7 @@ import time
 因为项目不需要什么运行日志, 所以决定自己写个简单的日志模块
 """
 
+
 def Singleton(cls):
     _instance = {}
 

@@ -208,8 +208,11 @@ class User(MethodView):
 
         return jsonify({"code": 200, "data": {}})
 
+
+class DelUser(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
-    def delete(self):
+    def post(self):
+
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
         user_name = data["username"]

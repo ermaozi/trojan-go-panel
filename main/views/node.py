@@ -1,6 +1,6 @@
 from flask import request, jsonify, current_app
 from flask.views import MethodView
-from main.libs.db_api import NodeInfoTable
+from main.libs.db_api import NodeInfoTable, UserNodesTable
 from main.libs.threading_api import ThreadApi
 from main.libs.auth_api import login_required, constant
 import requests
@@ -14,7 +14,7 @@ __all__ = ["AddNode", "GetNodeStatus", "GetNodeStatus"]
 data_dict = {}
 
 
-class AddNode(MethodView):
+class Node(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
     def post(self):
         node_api = NodeInfoTable()
@@ -33,8 +33,6 @@ class AddNode(MethodView):
         else:
             return jsonify({'code': 500, 'data': msg})
 
-
-class GetNodeInfo(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
     def get(self):
         node_api = NodeInfoTable()
@@ -43,6 +41,20 @@ class GetNodeInfo(MethodView):
         data['node_list'] = node_list
         data['domain_list'] = [node.get("node_domain") for node in node_list]
         return jsonify({'code': 200, 'data': data})
+
+
+class DelNode(MethodView):
+    @login_required(constant.PERMISSION_LEVEL_4)
+    def post(self):
+        data = request.get_data()
+        data = json.loads(data.decode("UTF-8"))
+        print(data)
+        node_name = data["node_name"]
+        node_api = NodeInfoTable()
+        user_node_api = UserNodesTable()
+        node_api.del_node(node_name)
+        user_node_api.del_node(node_name)
+        return jsonify({'code': 200, 'data': {}})
 
 
 class GetNodeStatus(MethodView):
