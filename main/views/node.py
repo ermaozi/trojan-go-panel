@@ -17,7 +17,14 @@ data_dict = {}
 class Node(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
     def post(self):
+        """
+        添加节点
+        """
         node_api = NodeInfoTable()
+        node_max_num = current_app.config["NODE_MAX_NUM"]
+        if node_max_num != -1:
+            if len(node_api.get_all_node_list()) >= node_max_num:
+                return jsonify({'code': 500, 'data': "添加失败, 节点数量超过限制"})
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
         data["node_encryption_key"] = str(
@@ -48,7 +55,6 @@ class DelNode(MethodView):
     def post(self):
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
-        print(data)
         node_name = data["node_name"]
         node_api = NodeInfoTable()
         user_node_api = UserNodesTable()

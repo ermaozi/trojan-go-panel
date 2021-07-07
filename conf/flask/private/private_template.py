@@ -18,6 +18,9 @@ class Base(object):
 
     DOMAIN = "MANAGE-DOMAIN"
 
+    NODE_MAX_NUM = -1
+    USER_MAX_NUM = -1
+
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     SQLALCHEMY_TRACK_MODIFICATIONS = True
 

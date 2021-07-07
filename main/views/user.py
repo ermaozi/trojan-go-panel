@@ -5,7 +5,7 @@ import string
 import datetime
 
 
-from flask import Response, jsonify, request, render_template
+from flask import Response, jsonify, request, render_template, current_app
 from flask.views import MethodView
 from main.libs.auth_api import create_token, login_required, constant
 from main.libs.db_api import NodeInfoTable, UserNodesTable, UserTable
@@ -93,7 +93,15 @@ class Logout(MethodView):
 
 class User(MethodView):
     def post(self):
+        """
+        添加用户
+        """
         user_api = UserTable()
+        node_max_num = current_app.config["USER_MAX_NUM"]
+        all_user = user_api.get_all_user()
+        if node_max_num != -1:
+            if len(all_user) >= node_max_num:
+                return jsonify({'code': 500, 'data': "添加失败, 用户数量超过限制"})
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
         try:
@@ -101,17 +109,17 @@ class User(MethodView):
             if user_api.username_if_exist(username):
                 raise Exception("用户名重复, 请重新输入")
             user_data = data
-            if not user_api.get_all_user():
+            if not all_user:
                 # 首个账号默认为创建人
                 user_data["user_permission"] = constant.PERMISSION_LEVEL_100
             subscribe_pwd = create_random_str(8, 16)
             user_data["subscribe_pwd"] = subscribe_pwd
             user_api.add_user(user_data)
             log.info("user", f"{username} 成功注册用户")
-            return jsonify({'code': 200, 'data': {}})
+            return jsonify({'code': 200, 'data': ""})
         except Exception as err:
-            log.error("user", f"{username} 注册失败{str(err)}{user_data}")
-            return jsonify({'code': 400, 'message': str(err)})
+            log.error("user", f"{username} 注册失败{str(err)}")
+            return jsonify({'code': 400, 'data': str(err)})
 
     @login_required(constant.PERMISSION_LEVEL_4)
     def get(self):
@@ -217,7 +225,9 @@ class DelUser(MethodView):
         data = json.loads(data.decode("UTF-8"))
         user_name = data["username"]
         user_api = UserTable()
-        user_api.del_user(user_name)
+        ret, msg = user_api.del_user(user_name)
+        if not ret:
+            return jsonify({"code": 500, "data": msg})
         user_node_api = UserNodesTable()
         user_node_api.del_user(user_name)
         del_list = user_node_api.get_node_for_user_name(user_name)
@@ -226,7 +236,7 @@ class DelUser(MethodView):
             "node_name": node
         } for node in del_list]
         user_node_api.del_user_node(del_data_list)
-        return jsonify({"code": 200, "data": {}})
+        return jsonify({"code": 200, "data": ""})
 
 
 class GetTrojanUrl(MethodView):

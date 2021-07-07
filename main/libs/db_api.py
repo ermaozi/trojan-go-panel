@@ -18,7 +18,13 @@ class UserTable(object):
         self.db.update({"username": username}, user_data)
 
     def del_user(self, username):
+        user_permission = self.db.select({"username": username},
+                                         ["user_permission"])[0]
+        print(user_permission)
+        if user_permission["user_permission"] >= 100:
+            return False, "创建人用户无法删除"
         self.db.delete({"username": username})
+        return True, ""
 
     def verify_user(self, username, password):
         fucking_time = 300
