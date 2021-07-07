@@ -29,8 +29,8 @@ class Logs(object):
         log_name, log_time = now_time.split(" ")
         log_time = time.strftime("%H:%M:%S", time.localtime())
         log_message = f"[{log_time}][{level}] - {message}\n"
-        with open(os.path.join(log_dir, log_name), "a") as f:
-            f.write(log_message.decode("utf-8"))
+        with open(os.path.join(log_dir, log_name), "ab") as f:
+            f.write(log_message.encode("utf-8"))
 
     def info(self, util_name, message):
         self.__log(util_name, "INFO", message)
