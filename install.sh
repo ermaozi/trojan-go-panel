@@ -87,8 +87,30 @@ checkSys() {
         ${PACKAGE_MANAGER} install -y libgdbm-dev libsqlite3-dev libssl-dev
         ${PACKAGE_MANAGER} install -y libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev
     fi
+    colorEcho $GREEN "依赖安装完成!"
+}
 
+initEvn(){
+    cd ~
+    mkdir -p /var/log/main/uwsgi/
+    mkdir -p /var/log/nginx/
+    mkdir -p /etc/nginx/
 
+    git clone https://github.com/ermaozi/trojan-go-panel.git
+
+    CONFIGDIR=$(cd conf/;pwd)
+
+    SERVERJSON="$CONFIGDIR/trojan-go/server.json"
+    TROJANSERVICE="$CONFIGDIR/trojan-go/trojan-go.service"
+    NGINXCONF="$CONFIGDIR/nginx/nginx.conf"
+    TROJANSQL="$CONFIGDIR/sql/trojan-user.sql"
+
+    SERVERJSON_DEFAULT="$CONFIGDIR/trojan-go/server-default.json"
+    TROJANSERVICE_DEFAULT="$CONFIGDIR/trojan-go/trojan-go-default.service"
+    NGINXCONF_DEFAULT="$CONFIGDIR/nginx/nginx-default.conf"
+
+    cp $NGINXCONF /etc/nginx/nginx.conf
+    sed -i "s#my_domain#$DOMAIN#" /etc/nginx/nginx.conf
 }
 
 installMaria(){
@@ -96,7 +118,7 @@ installMaria(){
 
     systemctl start docker
     systemctl enable docker.service
-    colorEcho $GREEN "依赖安装完成!"
+
     # 检查是否存在 mariadb 容器
     echo "开始安装 mariadb"
     if [[ $(docker ps --format "{{.Names}}"|grep mariadb) ]];then
@@ -119,12 +141,7 @@ installMaria(){
 installPanel(){
     echo "开始安装面板与配置文件"
 
-    mkdir -p /var/log/main/uwsgi/
-    mkdir -p /var/log/nginx/
-    mkdir -p /etc/nginx/
-
-    git clone https://github.com/ermaozi/trojan-go-panel.git
-    cd trojan-go-panel/
+    cd ~/trojan-go-panel/
     python3 -m venv venv
     source ./venv/bin/activate
     if [[ $worknode != 1 ]];then
@@ -139,20 +156,6 @@ installPanel(){
         pip install -r requirements_worknode.txt
         uwsgi --ini ./conf/uwsgi/uwsgi-worknode.ini
     fi
-
-    CONFIGDIR=$(cd conf/;pwd)
-
-    SERVERJSON="$CONFIGDIR/trojan-go/server.json"
-    TROJANSERVICE="$CONFIGDIR/trojan-go/trojan-go.service"
-    NGINXCONF="$CONFIGDIR/nginx/nginx.conf"
-    TROJANSQL="$CONFIGDIR/sql/trojan-user.sql"
-
-    SERVERJSON_DEFAULT="$CONFIGDIR/trojan-go/server-default.json"
-    TROJANSERVICE_DEFAULT="$CONFIGDIR/trojan-go/trojan-go-default.service"
-    NGINXCONF_DEFAULT="$CONFIGDIR/nginx/nginx-default.conf"
-
-    cp $NGINXCONF /etc/nginx/nginx.conf
-    sed -i "s#my_domain#$DOMAIN#" /etc/nginx/nginx.conf
 }
 
 # 安装证书
@@ -228,6 +231,7 @@ run(){
 main(){
     cd "/root"
     checkSys || return
+    initEvn || return
     if [[ $worknode != 1 ]];then
         installMaria || return
     fi
@@ -236,6 +240,9 @@ main(){
     installTrojanGo || return
     run || return
     colorEcho $GREEN "全部安装完成!"
+    echo ""
+    echo "访问 http://${DOMAIN} 看看吧"
+    echo "首次登录需要注册账号, 第一个账号视为管理员, 记得好好保存"
 }
 
 while [[ $# > 0 ]];do

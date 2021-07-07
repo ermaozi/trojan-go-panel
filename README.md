@@ -29,6 +29,13 @@ trojan-go 多用户多节点管理面板
 `source <(curl -sL https://git.io/install-trojan) --worknode 子节点域名 主节点域名 子节点名称 主节点数据库密码`
 
 ## 展示
+
+地址: [demo.ermao.net](http://demo.ermao.net)
+
+用户: admin
+
+密码: demopasswd
+
 ### 多节点管理
 ![node](./.github/source/node.png)
 ### 多用户管理
