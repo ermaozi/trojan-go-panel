@@ -1,65 +1,37 @@
 import base64
 import json
 import random
-import string
-import datetime
 
-
-from flask import Response, jsonify, request, render_template, current_app
+from flask import Response, current_app, jsonify, render_template, request
 from flask.views import MethodView
-from main.libs.auth_api import create_token, login_required, constant
-from main.libs.db_api import NodeInfoTable, UserNodesTable, UserTable
+from main.libs.auth_api import constant, create_token, login_required
+from main.libs.db_api import (NodeInfoTable, UserNodesTable, UserTable,
+                              check_user, add_locol_trojan)
 from main.libs.log import log
+from main.libs.tools import bytes2human, create_random_str
+from main.libs.constant.regex import re_user, re_password, re_mail
 
 __all__ = [
     "Login", "Logout", "User", "GetTrojanUrl", "Subscribe"
 ]
 
 
-def bytes2human(n):
-    symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
-    prefix = {}
-    for i, s in enumerate(symbols):
-        prefix[s] = 1 << (i + 1) * 10
-    for s in reversed(symbols):
-        if n >= prefix[s]:
-            value = float(n) / prefix[s]
-            return f'{value:.2f}{s}'
-    return f"{n}B"
-
-
-def create_random_str(nummin, nummax):
-    chars = string.ascii_letters + string.digits
-    return "".join(
-        random.choice(chars) for _ in range(random.randint(nummin, nummax)))
-
-
-def check_user(username):
-    user_api = UserTable()
-    user_node_api = UserNodesTable()
-
-    user_data = user_api.get_user(username)
-    username = user_data["username"]
-    quota = user_data.get("quota")
-    expiry_date = user_data.get("expiry_date")
-    nodes = user_node_api.get_node_for_user_name(username)
-    user_node_api.restore_user_traffic(username, nodes)
-    if expiry_date and expiry_date < datetime.datetime.now():
-        if expiry_date < datetime.datetime.now():
-            user_node_api.limit_user_traffic(username, nodes)
-    if quota > 0:
-        total = user_api.get_user_use(username, nodes)
-        if (quota * 1024 * 1024 * 1024) < total:
-            user_node_api.limit_user_traffic(username, nodes)
-
-
 class Login(MethodView):
     def post(self):
+        """
+        登录
+        """
         user_api = UserTable()
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
         username = data.get('username')
         password = data.get('password')
+        if not re_user.search(username):
+            ret = {
+                'code': 401,
+                'message': "用户名格式错误"
+            }
+            return jsonify(ret)
 
         check_result, msg = user_api.verify_user(username, password)
 
@@ -106,12 +78,24 @@ class User(MethodView):
         data = json.loads(data.decode("UTF-8"))
         try:
             username = data.get("username")
+
+            # 用户输入检查
+            if not re_user.search(username):
+                raise Exception("用户名格式错误, 请重新输入")
             if user_api.username_if_exist(username):
                 raise Exception("用户名重复, 请重新输入")
+            if not re_password.search(data.get("password")):
+                raise Exception("密码格式错误, 请重新输入")
+            if re_mail.search(data.get("usermail")):
+                raise Exception("邮箱格式错误, 请重新输入")
+
             user_data = data
             if not all_user:
                 # 首个账号默认为创建人
                 user_data["user_permission"] = constant.PERMISSION_LEVEL_100
+                # 创建本地节点
+                add_locol_trojan()
+
             subscribe_pwd = create_random_str(8, 16)
             user_data["subscribe_pwd"] = subscribe_pwd
             user_api.add_user(user_data)
@@ -212,7 +196,7 @@ class User(MethodView):
             node_usernumber = len(user_node_api.get_username_for_nodename(node_name))
             node_api.set_node_usernumber(node_name, node_usernumber)
         if all_set_node:
-            check_user(user_name)
+            check_user(user_api, user_node_api, user_name)
 
         return jsonify({"code": 200, "data": {}})
 

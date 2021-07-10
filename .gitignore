@@ -2,4 +2,5 @@ venv/
 .vscode/
 __pycache__/
 *.pyc
-private.py
+__private__.py
+__setting__.yaml

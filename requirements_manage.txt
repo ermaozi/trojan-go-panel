@@ -5,4 +5,6 @@ Flask-SQLAlchemy
 Flask-Apscheduler
 PyMySQL
 requests
+psutil
+pyyaml
 uWSGI

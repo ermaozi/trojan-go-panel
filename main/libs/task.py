@@ -1,32 +1,18 @@
-import datetime
-
 from main.models.exts import scheduler
-from main.libs.db_api import UserNodesTable, UserTable
+from main.libs.db_api import UserNodesTable, UserTable, check_user
 
 
-def check_user():
+def cron_check_user():
     with scheduler.app.app_context():
         user_api = UserTable()
         user_node_api = UserNodesTable()
 
-        for i in user_api.get_all_user():
-            username = i["username"]
-            quota = i.get("quota")
-            expiry_date = i.get("expiry_date")
-            nodes = user_node_api.get_node_for_user_name(username)
-            user_node_api.restore_user_traffic(username, nodes)
-            if expiry_date and expiry_date < datetime.datetime.now():
-                if expiry_date < datetime.datetime.now():
-                    user_node_api.limit_user_traffic(username, nodes)
-            if quota > 0:
-                total = user_api.get_user_use(username, nodes)
-                if (quota * 1024 * 1024 * 1024) < total:
-                    user_node_api.limit_user_traffic(username, nodes)
+        check_user(user_api, user_node_api)
 
 
 jobs = [{
     'id': 'check_user',
-    'func': check_user,
+    'func': cron_check_user,
     'trigger': 'cron',
     'hour': 0,
     'minute': 30

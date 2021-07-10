@@ -1,0 +1,14 @@
+
+mail:
+  mail: false
+  mail_server: 'smtp.exmail.qq.com'  # 邮箱服务器
+  mail_prot: 465  # 邮箱端口
+  mail_use_ssl: true  # 是否需要 SSL 加密
+  mail_username: "admin@ermao.net"  # 邮箱账户
+  mail_password: ""  # 邮箱密码或授权码
+  mail_debug: false  # 邮箱Debug模式
+
+trojan:
+  is_local_trojan: true  # 是否启用主节点trojan
+  NODE_MAX_NUM: -1  # 最大节点数, -1 为无限制
+  USER_MAX_NUM: -1  # 最大用户数, -1 为无限制

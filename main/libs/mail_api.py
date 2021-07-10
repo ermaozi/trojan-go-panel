@@ -5,7 +5,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
 import smtplib
-from flask import current_app
+from main.libs.setting import setting
 import random
 
 
@@ -13,12 +13,13 @@ class Mail(object):
     def __init__(self):
         """ 配置文件路径: main/conf/flask/private/private.py """
 
-        self.server = current_app.config.get('MAIL_SERVER')
-        self.port = current_app.config.get('MAIL_PROT')
-        self.ssl = current_app.config.get('MAIL_USE_SSL')
-        self.usernema = current_app.config.get('MAIL_USERNAME')
-        self.password = current_app.config.get('MAIL_PASSWORD')
-        self.debug = current_app.config.get('MAIL_DEBUG')
+        mail_setting = setting.get("mail")
+        self.server = mail_setting.get('mail_server')
+        self.port = mail_setting.get('mail_prot')
+        self.ssl = mail_setting.get('mail_use_ssl')
+        self.usernema = mail_setting.get('mail_username')
+        self.password = mail_setting.get('mail_password')
+        self.debug = mail_setting.get('mail_debug')
 
     def send_verified_code(self, receiver):
         """

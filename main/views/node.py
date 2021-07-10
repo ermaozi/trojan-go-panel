@@ -3,6 +3,9 @@ from flask.views import MethodView
 from main.libs.db_api import NodeInfoTable, UserNodesTable
 from main.libs.threading_api import ThreadApi
 from main.libs.auth_api import login_required, constant
+
+from main.libs.tools import get_node_status
+
 import requests
 import uuid
 import json
@@ -82,19 +85,25 @@ class GetNodeStatus(MethodView):
 def get_node_info(domain):
     data = {}
     data["node_status"] = {}
-    try:
-        hw_info = requests.get(f'http://{domain}/get_hw_info', timeout=5)
-        if hw_info.status_code == 200:
-            data["node_status"]["status"] = "success"
-            data["node_status"]["info"] = "正常"
-            data["node_status"]["msg"] = "正常"
-            data.update(json.loads(hw_info.text))
-        else:
+    if domain == "localhost":
+        data["node_status"]["status"] = "success"
+        data["node_status"]["info"] = "正常"
+        data["node_status"]["msg"] = "正常"
+        data.update(get_node_status())
+    else:
+        try:
+            hw_info = requests.get(f'http://{domain}/get_hw_info', timeout=5)
+            if hw_info.status_code == 200:
+                data["node_status"]["status"] = "success"
+                data["node_status"]["info"] = "正常"
+                data["node_status"]["msg"] = "正常"
+                data.update(json.loads(hw_info.text))
+            else:
+                data["node_status"]["status"] = "error"
+                data["node_status"]["info"] = "异常"
+                data["node_status"]["msg"] = "节点连接异常"
+        except Exception as e:
             data["node_status"]["status"] = "error"
             data["node_status"]["info"] = "异常"
-            data["node_status"]["msg"] = "节点连接异常"
-    except Exception as e:
-        data["node_status"]["status"] = "error"
-        data["node_status"]["info"] = "异常"
-        data["node_status"]["msg"] = str(e)
+            data["node_status"]["msg"] = str(e)
     data_dict[domain] = data

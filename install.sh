@@ -54,6 +54,10 @@ checkSys() {
         DOMAIN=$input
         read -p "请输入您预设的数据库密码(自己设置, 自己记住): " input
         mysql_password=$input
+
+        read -p "是否启用主节点trojan?(默认启用, 若需管控多个子节点, 则建议不启用主节点trojan)[Y/N]" input
+        is_local_trojan=$input
+
         mysql_server_addr=127.0.0.1
         mysql_database=local_trojan
     fi
@@ -146,11 +150,19 @@ installPanel(){
     source ./venv/bin/activate
     if [[ $worknode != 1 ]];then
         pip install -r requirements_manage.txt
-        cp conf/flask/private/private_template.py conf/flask/private/private.py
-        sed -i "s#PRO-PASSWORD#$mysql_password#" conf/flask/private/private.py
-        sed -i "s#MANAGE-DOMAIN#$DOMAIN#" conf/flask/private/private.py
-        sed -i "s#flask_secret_key#$(cat /proc/sys/kernel/random/uuid)#" conf/flask/private/private.py
+
+        cp conf/flask/private/private_template.py conf/flask/__private__.py
+        cp conf/flask/private/setting_template.yaml conf/flask/__setting__.yaml
+
+        sed -i "s#PRO-PASSWORD#$mysql_password#" conf/flask/__private__.py
+        sed -i "s#MANAGE-DOMAIN#$DOMAIN#" conf/flask/__private__.py
+        sed -i "s#flask_secret_key#$(cat /proc/sys/kernel/random/uuid)#" conf/flask/__private__.py
         sed -i "s#http://127.0.0.1:8000#http://$DOMAIN#" web/static/config.js
+
+        if [[ "Nn" =~ "$is_local_trojan" ]];then
+             sed -i "s#is_local_trojan: true#is_local_trojan: false#" conf/flask/__setting__.yaml
+        fi
+
         uwsgi --ini ./conf/uwsgi/uwsgi-manage.ini
     else
         pip install -r requirements_worknode.txt

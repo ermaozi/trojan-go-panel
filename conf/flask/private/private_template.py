@@ -1,5 +1,4 @@
 from main.libs.task import jobs
-
 """
     警告:
         本文件内所有内容均属于敏感信息
@@ -18,19 +17,11 @@ class Base(object):
 
     DOMAIN = "MANAGE-DOMAIN"
 
-    NODE_MAX_NUM = -1
-    USER_MAX_NUM = -1
-
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     SQLALCHEMY_TRACK_MODIFICATIONS = True
 
-    MAIL_SERVER = 'smtp.exmail.qq.com'  # 邮箱服务器
-    MAIL_PROT = 465  # 邮箱端口
-    MAIL_USE_SSL = True  # 是否需要 SSL 加密
-    MAIL_USERNAME = "admin@ermao.net"  # 邮箱账户
-    MAIL_PASSWORD = ""  # 邮箱密码或授权码
-
     JOBS = jobs
+
 
 class PriProduction(Base):
     """

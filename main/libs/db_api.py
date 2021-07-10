@@ -4,6 +4,44 @@ from main.models.modetool import Database
 from main.libs.local_db import DBApi
 
 
+def check_user(user_api, user_node_api, username=None):
+    """
+    检查当前限制
+    """
+    if username:
+        user_list = [user_api.get_user(username)]
+    else:
+        user_list = user_api.get_all_user()
+    for user in user_list:
+        username = user["username"]
+        quota = user.get("quota")
+        expiry_date = user.get("expiry_date")
+        nodes = user_node_api.get_node_for_user_name(username)
+        user_node_api.restore_user_traffic(username, nodes)
+        if expiry_date and expiry_date < datetime.now():
+            if expiry_date < datetime.now():
+                user_node_api.limit_user_traffic(username, nodes)
+        if quota > 0:
+            total = user_api.get_user_use(username, nodes)
+            if (quota * 1024 * 1024 * 1024) < total:
+                user_node_api.limit_user_traffic(username, nodes)
+
+
+def add_locol_trojan():
+    from main.libs.setting import setting
+    if setting.get("trojan", "is_local_trojan"):
+        db = Database(NodeInfo)
+        data = {
+            "node_name": "本机",
+            "node_remarks": "本机节点",
+            "node_domain": "localhost",
+            "node_encryption_key": "null",
+            "node_region": "无",
+            "node_db": "local_trojan",
+        }
+        db.insert(data)
+
+
 class UserTable(object):
     def __init__(self) -> None:
         self.db = Database(User)
@@ -171,8 +209,9 @@ class NodeInfoTable(object):
         根据数据库名称删除 trojan 数据库
         """
         self.db.delete({"node_name": node_name})
+        node = self.db.select({"node_name": node_name})[0]
         with DBApi() as db:
-            sql = f'drop database {node_name}'
+            sql = f'drop database {node["node_db"]}'
             db.cur.execute(sql)
 
     def get_all_node_list(self):
