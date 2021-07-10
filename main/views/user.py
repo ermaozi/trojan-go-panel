@@ -239,7 +239,8 @@ class GetTrojanUrl(MethodView):
             pwd = node_info["node_pwd"]
             node_name = node_info["node_name"]
             node = node_api.get_node_for_nodename(node_name)
-            node_domain = node["node_domain"]
+            _domain = node["node_domain"]
+            node_domain = current_app.config["DOMAIN"] if _domain == "localhost" else _domain
             node_region = node["node_region"]
             trojan_urls.append(f"trojan://{pwd}@{node_domain}:443#{node_region}|{node_name}")
         subscribe_pwd = user_api.get_user(user_name)["subscribe_pwd"]
@@ -307,7 +308,8 @@ class Subscribe(MethodView):
                 pwd = node_info["node_pwd"]
                 node_name = node_info["node_name"]
                 node = node_api.get_node_for_nodename(node_name)
-                node_domain = node["node_domain"]
+                _domain = node["node_domain"]
+                node_domain = current_app.config["DOMAIN"] if _domain == "localhost" else _domain
                 node_region = node["node_region"]
                 trojan_urls.append(f"trojan://{pwd}@{node_domain}:443#{node_region}|{node_name}")
             nodes_str = "\n".join(trojan_urls)
