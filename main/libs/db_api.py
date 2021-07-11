@@ -45,6 +45,7 @@ def add_locol_trojan():
 class UserTable(object):
     def __init__(self) -> None:
         self.db = Database(User)
+        self.node_db_dict = NodeInfoTable().get_node_db_dict()
 
     def add_user(self, data):
         self.db.insert(data)
@@ -104,7 +105,7 @@ class UserTable(object):
         upload = download = 0
         sql = f'select download,upload from users where username="{username}"'
         for node in node_list:
-            with DBApi(node) as db:
+            with DBApi(self.node_db_dict[node]) as db:
                 db.cur.execute(sql)  # 执行sql语句
                 results = db.cur.fetchall()
                 if results:
@@ -116,6 +117,7 @@ class UserTable(object):
 class UserNodesTable(object):
     def __init__(self) -> None:
         self.db = Database(UserNods)
+        self.node_db_dict = NodeInfoTable().get_node_db_dict()
 
     def get_node_for_user_name(self, user_name):
         nodes = self.db.select({"user_name": user_name}, ["node_name"])
@@ -133,7 +135,7 @@ class UserNodesTable(object):
             node_name = data["node_name"]
             user_name = data["user_name"]
             pwd = data["node_pwd"]
-            with DBApi(node_name) as db:
+            with DBApi(self.node_db_dict[node_name]) as db:
                 db.insert_user(user_name, pwd)
         self.db.insert_list(UserNods, data_list)
 
@@ -141,7 +143,7 @@ class UserNodesTable(object):
         for data in data_list:
             node_name = data["node_name"]
             user_name = data["user_name"]
-            with DBApi(node_name) as db:
+            with DBApi(self.node_db_dict[node_name]) as db:
                 sql = f'delete from users where username="{user_name}";'
                 db.cur.execute(sql)  # 执行sql语句
                 db.db.commit()
@@ -156,14 +158,14 @@ class UserNodesTable(object):
     def limit_user_traffic(self, user_name, nodes):
         sql = f'UPDATE users SET quota=0 where username="{user_name}";'
         for node_name in nodes:
-            with DBApi(node_name) as db:
+            with DBApi(self.node_db_dict[node_name]) as db:
                 db.cur.execute(sql)  # 执行sql语句
                 db.db.commit()
 
     def restore_user_traffic(self, user_name, nodes):
         sql = f'UPDATE users SET quota=-1 where username="{user_name}";'
         for node_name in nodes:
-            with DBApi(node_name) as db:
+            with DBApi(self.node_db_dict[node_name]) as db:
                 db.cur.execute(sql)  # 执行sql语句
                 db.db.commit()
 
@@ -172,10 +174,21 @@ class NodeInfoTable(object):
     def __init__(self) -> None:
         self.db = Database(NodeInfo)
 
+    def get_node_db_dict(self):
+        """
+        获取node_name对应的node_db
+        """
+        node_db_dict = {}
+        for node in self.db.select():
+            node_db_dict[node["node_name"]] = node["node_db"]
+        return node_db_dict
+
     def add_node(self, data):
 
-        if data.get("node_db"):
+        if not data.get("node_db"):
             data["node_db"] = data["node_name"]  # 临时先用这个
+        if data.get("node_domain") == "local_host":
+            data["node_db"] = "local_trojan"
 
         node_list = self.db.select({}, ["node_name", "node_domain"])
         node_name_list = [node.get("node_name") for node in node_list]
@@ -187,9 +200,9 @@ class NodeInfoTable(object):
         self.db.insert(data)
 
         with DBApi() as db:
-            sql = f'create database {data["node_name"]}'
+            sql = f'create database {data["node_db"]}'
             db.cur.execute(sql)
-        with DBApi(data["node_name"]) as db:
+        with DBApi(data["node_db"]) as db:
             sql = """CREATE TABLE users (
                     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
                     username VARCHAR(64) NOT NULL,
@@ -208,11 +221,11 @@ class NodeInfoTable(object):
         """
         根据数据库名称删除 trojan 数据库
         """
-        self.db.delete({"node_name": node_name})
         node = self.db.select({"node_name": node_name})[0]
         with DBApi() as db:
             sql = f'drop database {node["node_db"]}'
             db.cur.execute(sql)
+        self.db.delete({"node_name": node_name})
 
     def get_all_node_list(self):
         select_list = ["node_name", "node_domain",
