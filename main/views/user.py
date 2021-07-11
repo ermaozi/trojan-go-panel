@@ -11,6 +11,7 @@ from main.libs.db_api import (NodeInfoTable, UserNodesTable, UserTable,
                               check_user, add_locol_trojan)
 from main.libs.log import log
 from main.libs.tools import bytes2human, create_random_str
+from main.libs.setting import setting
 from main.libs.constant.regex import re_user, re_password, re_mail
 
 __all__ = ["Login", "Logout", "User", "GetTrojanUrl", "Subscribe"]
@@ -64,7 +65,7 @@ class User(MethodView):
         添加用户
         """
         user_api = UserTable()
-        node_max_num = current_app.config["USER_MAX_NUM"]
+        node_max_num = setting.get["USER_MAX_NUM"]
         all_user = user_api.get_all_user()
         if node_max_num != -1:
             if len(all_user) >= node_max_num:
@@ -81,7 +82,7 @@ class User(MethodView):
                 raise Exception("用户名重复, 请重新输入")
             if not re_password.search(data.get("password")):
                 raise Exception("密码格式错误, 请重新输入")
-            if re_mail.search(data.get("usermail")):
+            if data.get("usermail") and re_mail.search(data.get("usermail")):
                 raise Exception("邮箱格式错误, 请重新输入")
 
             user_data = data
