@@ -2,6 +2,7 @@ from flask import request, jsonify, current_app
 from flask.views import MethodView
 from main.libs.db_api import NodeInfoTable, UserNodesTable
 from main.libs.threading_api import ThreadApi
+from main.libs.setting import setting
 from main.libs.auth_api import login_required, constant
 
 from main.libs.tools import get_node_status
@@ -24,7 +25,7 @@ class Node(MethodView):
         添加节点
         """
         node_api = NodeInfoTable()
-        node_max_num = current_app.config["NODE_MAX_NUM"]
+        node_max_num = setting.get("trojan", "NODE_MAX_NUM")
         if node_max_num != -1:
             if len(node_api.get_all_node_list()) >= node_max_num:
                 return jsonify({'code': 500, 'data': "添加失败, 节点数量超过限制"})
