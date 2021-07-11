@@ -1,5 +1,7 @@
 import base64
 import json
+import os
+import yaml
 import random
 
 from flask import Response, current_app, jsonify, render_template, request
@@ -11,9 +13,7 @@ from main.libs.log import log
 from main.libs.tools import bytes2human, create_random_str
 from main.libs.constant.regex import re_user, re_password, re_mail
 
-__all__ = [
-    "Login", "Logout", "User", "GetTrojanUrl", "Subscribe"
-]
+__all__ = ["Login", "Logout", "User", "GetTrojanUrl", "Subscribe"]
 
 
 class Login(MethodView):
@@ -27,10 +27,7 @@ class Login(MethodView):
         username = data.get('username')
         password = data.get('password')
         if not re_user.search(username):
-            ret = {
-                'code': 401,
-                'message': "用户名格式错误"
-            }
+            ret = {'code': 401, 'message': "用户名格式错误"}
             return jsonify(ret)
 
         check_result, msg = user_api.verify_user(username, password)
@@ -47,11 +44,9 @@ class Login(MethodView):
             }
             log.info("user", f"{username} 登录成功 使用ip:{request.remote_addr}")
         else:
-            ret = {
-                'code': 401,
-                'message': msg
-            }
-            log.info("user", f"{username} 登录失败:'{msg}' 使用ip:{request.remote_addr}")
+            ret = {'code': 401, 'message': msg}
+            log.info("user",
+                     f"{username} 登录失败:'{msg}' 使用ip:{request.remote_addr}")
         return jsonify(ret)
 
     def get(self):
@@ -189,11 +184,12 @@ class User(MethodView):
         } for node in del_list]
         user_node_api.del_user_node(del_data_list)
 
-        all_set_node = del_data_list+insert_data_list
+        all_set_node = del_data_list + insert_data_list
 
         for node in all_set_node:
             node_name = node["node_name"]
-            node_usernumber = len(user_node_api.get_username_for_nodename(node_name))
+            node_usernumber = len(
+                user_node_api.get_username_for_nodename(node_name))
             node_api.set_node_usernumber(node_name, node_usernumber)
         if all_set_node:
             check_user(user_api, user_node_api, user_name)
@@ -240,9 +236,11 @@ class GetTrojanUrl(MethodView):
             node_name = node_info["node_name"]
             node = node_api.get_node_for_nodename(node_name)
             _domain = node["node_domain"]
-            node_domain = current_app.config["DOMAIN"] if _domain == "localhost" else _domain
+            node_domain = current_app.config[
+                "DOMAIN"] if _domain == "localhost" else _domain
             node_region = node["node_region"]
-            trojan_urls.append(f"trojan://{pwd}@{node_domain}:443#{node_region}|{node_name}")
+            trojan_urls.append(
+                f"trojan://{pwd}@{node_domain}:443#{node_region}|{node_name}")
         subscribe_pwd = user_api.get_user(user_name)["subscribe_pwd"]
         subscribe_link = ""
         if subscribe_pwd:
@@ -271,9 +269,11 @@ class Subscribe(MethodView):
         for _ in range(random.randint(1, 20)):
             domain3 = create_random_str(5, 9)
             domain2 = create_random_str(3, 5)
-            domain1 = random.choice(["com", "net", "org", "xyz", "cc", "fuck", "io"])
+            domain1 = random.choice(
+                ["com", "net", "org", "xyz", "cc", "fuck", "io"])
             pwd = create_random_str(5, 9)
-            trojan_urls.append(f"trojan://{pwd}@{domain3}.{domain2}.{domain1}:443")
+            trojan_urls.append(
+                f"trojan://{pwd}@{domain3}.{domain2}.{domain1}:443")
         nodes_str = "\n".join(trojan_urls)
         return base64.b64encode(nodes_str.encode("utf-8"))
 
@@ -281,6 +281,7 @@ class Subscribe(MethodView):
         rsp = dict(request.args)
         user_name = rsp["u"]
         subscribe_pwd = rsp["p"]
+        subscribe_type = rsp.get("t")
 
         user_api = UserTable()
         user_node_api = UserNodesTable()
@@ -290,32 +291,78 @@ class Subscribe(MethodView):
 
         if not user_api.username_if_exist(user_name):
             content = self.generating_fake_data()
-            response = Response(content, content_type="text/plain;charset=utf-8")
+            response = Response(content,
+                                content_type="text/plain;charset=utf-8")
             return response
 
         v_subscribe_pwd = user_api.get_user(user_name)["subscribe_pwd"]
 
         if subscribe_pwd != v_subscribe_pwd:
             content = self.generating_fake_data()
-            response = Response(content, content_type="text/plain;charset=utf-8")
+            response = Response(content,
+                                content_type="text/plain;charset=utf-8")
             return response
 
         try:
-            trojan_urls = []
             node_info_list = user_node_api.get_node_info_for_user_name(
                 user_name)
-            for node_info in node_info_list:
-                pwd = node_info["node_pwd"]
-                node_name = node_info["node_name"]
-                node = node_api.get_node_for_nodename(node_name)
-                _domain = node["node_domain"]
-                node_domain = current_app.config["DOMAIN"] if _domain == "localhost" else _domain
-                node_region = node["node_region"]
-                trojan_urls.append(f"trojan://{pwd}@{node_domain}:443#{node_region}|{node_name}")
-            nodes_str = "\n".join(trojan_urls)
-            content = base64.b64encode(nodes_str.encode("utf-8"))
+
+            if subscribe_type == "clash":
+                clash_list = []
+                clash_name_list = []
+                for node_info in node_info_list:
+                    trojan_clash = {"type": "trojan"}
+                    node_name = node_info["node_name"]
+                    node = node_api.get_node_for_nodename(node_name)
+                    _domain = node["node_domain"]
+                    node_domain = current_app.config[
+                        "DOMAIN"] if _domain == "localhost" else _domain
+
+                    trojan_clash["name"] = node_name
+                    trojan_clash["server"] = node_domain
+                    trojan_clash["password"] = node_info["node_pwd"]
+                    trojan_clash["sni"] = node_domain
+                    trojan_clash["port"] = 443
+                    clash_list.append(trojan_clash)
+                    clash_name_list.append(node_name)
+                base_clask = os.path.realpath(
+                    __file__ + "/../../../conf/clash/base_clask.yaml")
+                with open(base_clask, "rb") as yaml_file:
+                    yaml_obj = yaml.load(yaml_file, Loader=yaml.FullLoader)
+                yaml_obj["proxies"] = clash_list
+                yaml_obj["proxy-groups"] = [
+                    {
+                        "name": "节点选择",
+                        "proxies": [
+                            "DIRECT",
+                        ] + clash_name_list,
+                        "type": "select"
+                    },
+                    {
+                        "name": "PROXY",
+                        "proxies": clash_name_list,
+                        "type": "select"
+                    }
+                ]
+                content = yaml.dump(yaml_obj)
+            else:
+                trojan_urls = []
+                for node_info in node_info_list:
+                    trojan_clash = {}
+                    pwd = node_info["node_pwd"]
+                    node_name = node_info["node_name"]
+                    node = node_api.get_node_for_nodename(node_name)
+                    _domain = node["node_domain"]
+                    node_domain = current_app.config[
+                        "DOMAIN"] if _domain == "localhost" else _domain
+                    node_region = node["node_region"]
+                    trojan_urls.append(
+                        f"trojan://{pwd}@{node_domain}:443#{node_region}|{node_name}"
+                    )
+                nodes_str = "\n".join(trojan_urls)
+                content = base64.b64encode(nodes_str.encode("utf-8"))
         except Exception as e:
-            return "错误"
+            return f"错误: {str(e)}"
 
         response = Response(content, content_type="text/plain;charset=utf-8")
         return response
