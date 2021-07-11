@@ -65,7 +65,7 @@ class User(MethodView):
         添加用户
         """
         user_api = UserTable()
-        node_max_num = setting.get["USER_MAX_NUM"]
+        node_max_num = setting.get("trojan", "USER_MAX_NUM")
         all_user = user_api.get_all_user()
         if node_max_num != -1:
             if len(all_user) >= node_max_num:
@@ -82,7 +82,7 @@ class User(MethodView):
                 raise Exception("用户名重复, 请重新输入")
             if not re_password.search(data.get("password")):
                 raise Exception("密码格式错误, 请重新输入")
-            if data.get("usermail") and re_mail.search(data.get("usermail")):
+            if data.get("usermail") and not re_mail.search(data.get("usermail")):
                 raise Exception("邮箱格式错误, 请重新输入")
 
             user_data = data
