@@ -101,6 +101,8 @@ initEvn(){
     mkdir -p /etc/nginx/
 
     git clone https://github.com/ermaozi/trojan-go-panel.git
+    
+    cd ~/trojan-go-panel
 
     CONFIGDIR=$(cd conf/;pwd)
 
