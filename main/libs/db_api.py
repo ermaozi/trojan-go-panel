@@ -6,7 +6,9 @@ from main.libs.local_db import DBApi
 
 def check_user(user_api, user_node_api, username=None):
     """
-    检查当前限制
+    检查当前限制（日期/流量限制）
+    若超过使用限制则将该用户所有链接可用流量置为0
+    不传入 username 将会检查所有用户
     """
     if username:
         user_list = [user_api.get_user(username)]
@@ -28,6 +30,9 @@ def check_user(user_api, user_node_api, username=None):
 
 
 def add_locol_trojan():
+    """
+    将主节点添加至可用节点
+    """
     from main.libs.setting import setting
     if setting.get("trojan", "is_local_trojan"):
         db = Database(NodeInfo)
@@ -48,15 +53,27 @@ class UserTable(object):
         self.node_db_dict = NodeInfoTable().get_node_db_dict()
 
     def add_user(self, data):
+        """
+        添加用户
+        """
         self.db.insert(data)
 
     def get_user(self, username):
+        """
+        获取单个用户的所有信息
+        """
         return self.db.select({"username": username})[0]
 
     def set_user(self, username, user_data):
+        """
+        修改用户信息
+        """
         self.db.update({"username": username}, user_data)
 
     def del_user(self, username):
+        """
+        删除单个用户
+        """
         user_permission = self.db.select({"username": username},
                                          ["user_permission"])[0]
         print(user_permission)
@@ -66,6 +83,12 @@ class UserTable(object):
         return True, ""
 
     def verify_user(self, username, password):
+        """
+        检查用户与密码是否匹配
+        每次检查都会更新用户表中的login_time
+        每次检查失败, 用户表中num_of_fail会+1
+        若num_of_fail>= 5, 检查失败后需要等待300
+        """
         fucking_time = 300
         fucking_numb = 5
         usr = db.session.query(User).filter_by(username=username).first()
@@ -92,16 +115,30 @@ class UserTable(object):
             return False, "用户不存在"
 
     def get_user_permission(self, username):
+        """
+        获取用户权限等级
+        """
         return self.db.select({"username": username},
                               ["user_permission"])[0]["user_permission"]
 
     def get_all_user(self):
+        """
+        获取所有用户的所有信息
+        """
         return(self.db.select())
 
     def username_if_exist(self, username):
+        """
+        检查用户是否存在, 已存在返回 True, 不存在返回 False
+        """
         return bool(self.db.select({"username": username}))
 
     def get_user_use(self, username, node_list):
+        """
+        获取用户流量使用情况
+        分别为: 上传流量, 下载流量, 总流量
+        单位为 B
+        """
         upload = download = 0
         sql = f'select download,upload from users where username="{username}"'
         for node in node_list:
@@ -120,17 +157,29 @@ class UserNodesTable(object):
         self.node_db_dict = NodeInfoTable().get_node_db_dict()
 
     def get_node_for_user_name(self, user_name):
+        """
+        获取用户名对应的所有节点名
+        """
         nodes = self.db.select({"user_name": user_name}, ["node_name"])
         return [i["node_name"] for i in nodes]
 
     def get_node_info_for_user_name(self, user_name):
+        """
+        获取用户名对应的所有节点信息
+        """
         return self.db.select({"user_name": user_name})
 
     def get_username_for_nodename(self, node_name):
+        """
+        获取节点名对应的所有用户名
+        """
         nodes = self.db.select({"node_name": node_name}, ["user_name"])
         return [i["user_name"] for i in nodes]
 
     def add_user_node(self, data_list):
+        """
+        向某用户添加一个或多个节点
+        """
         for data in data_list:
             node_name = data["node_name"]
             user_name = data["user_name"]
@@ -140,6 +189,9 @@ class UserNodesTable(object):
         self.db.insert_list(UserNods, data_list)
 
     def del_user_node(self, data_list):
+        """
+        删除某用户的一个或多个节点
+        """
         for data in data_list:
             node_name = data["node_name"]
             user_name = data["user_name"]
@@ -150,12 +202,21 @@ class UserNodesTable(object):
             self.db.delete(data)
 
     def del_user(self, username):
+        """
+        通过用户名删除所有匹配到的记录
+        """
         self.db.delete({"user_name": username})
 
     def del_node(self, node_name):
+        """
+        通过节点名删除所有匹配到的记录
+        """
         self.db.delete({"node_name": node_name})
 
     def limit_user_traffic(self, user_name, nodes):
+        """
+        将某用户名下所有的节点置为【不可用】(可用流量置为0)
+        """
         sql = f'UPDATE users SET quota=0 where username="{user_name}";'
         for node_name in nodes:
             with DBApi(self.node_db_dict[node_name]) as db:
@@ -163,6 +224,9 @@ class UserNodesTable(object):
                 db.db.commit()
 
     def restore_user_traffic(self, user_name, nodes):
+        """
+        将某用户名下所有的节点置为【可用】(可用流量置为-1)
+        """
         sql = f'UPDATE users SET quota=-1 where username="{user_name}";'
         for node_name in nodes:
             with DBApi(self.node_db_dict[node_name]) as db:
@@ -184,7 +248,9 @@ class NodeInfoTable(object):
         return node_db_dict
 
     def add_node(self, data):
-
+        """
+        添加节点, 并创建节点对应的数据库
+        """
         if not data.get("node_db"):
             data["node_db"] = data["node_name"]  # 临时先用这个
         if data.get("node_domain") == "local_host":
@@ -219,7 +285,7 @@ class NodeInfoTable(object):
 
     def del_node(self, node_name):
         """
-        根据数据库名称删除 trojan 数据库
+        删除节点, 并删除对应的数据库
         """
         node = self.db.select({"node_name": node_name})[0]
         with DBApi() as db:
@@ -228,13 +294,22 @@ class NodeInfoTable(object):
         self.db.delete({"node_name": node_name})
 
     def get_all_node_list(self):
+        """
+        获取所有的节点信息
+        """
         select_list = ["node_name", "node_domain",
                        "node_region", "node_usernumber"]
         return self.db.select({}, select_list)
 
     def get_node_for_nodename(self, node_name):
+        """
+        通过节点名称获取节点信息
+        """
         return self.db.select({"node_name": node_name})[0]
 
     def set_node_usernumber(self, node_name, usernumber):
+        """
+        修改节点中正在使用的用户数量
+        """
         self.db.update({"node_name": node_name},
                        {"node_usernumber": usernumber})
