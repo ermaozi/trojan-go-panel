@@ -23,8 +23,26 @@ class Setting(object):
     def set(self):
         pass
 
+    def update(self):
+        """
+        更新配置文件
+        """
+        old_setting = self.get()
+        setting_path = os.path.realpath(
+            __file__ + "/../../../conf/flask/private/setting_template.yaml")
+        with open(setting_path, "rb") as yaml_file:
+            setting_template = yaml.load(yaml_file, Loader=yaml.FullLoader)
+
+        new_setting = dict(old_setting, **setting_template)
+        for key in new_setting.keys():      # 找回dict1中关键字对应的value
+            if key in old_setting:
+                new_setting[key] = dict(new_setting[key], **old_setting[key])
+
+        with open(self.setting_path, "wb") as yaml_file:
+            yaml_file.write(yaml.dump(new_setting).encode("utf-8"))
+
 
 setting = Setting()
 
 if __name__ == "__main__":
-    print(setting.get("trojan", "is_local_trojan"))
+    setting.update()

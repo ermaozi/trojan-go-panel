@@ -268,12 +268,13 @@ while [[ $# > 0 ]];do
             mysql_server_addr=$3
             mysql_database=$4
             mysql_password=$5
+            if [[ $# != 5 ]];then
+                echo "参数数量错误"
+                exit 1
+            fi
             shift;;
         -h|--help)
             HELP=1
-            ;;
-        --update)
-            update=1
             ;;
         *)
         ;;
@@ -281,12 +282,35 @@ while [[ $# > 0 ]];do
     shift # past argument or value
 done
 
-if [[ $update == 1 ]];then
+if [[ -d /root/trojan-go-panel/ ]];then
+    echo "拉取最新代码"
     cd /root/trojan-go-panel/
     git pull
     source ./venv/bin/activate
+
+    echo "更新依赖"
+    pip install -U -r requirements_manage.txt
+
+    echo "更新数据库"
+    if [[ ! -d ./migrations ]]; then
+        python db_manage.py db init
+    fi
+    python db_manage.py db migrate
+    python db_manage.py db upgrade
+
+    echo "更新配置文件"
+    python ./main/libs/setting.py
+
+    echo "重启服务"
     pkill -9 -f uwsgi
+    sleep 3s
     uwsgi --ini ./conf/uwsgi/uwsgi-manage.ini
+
+    if [[ $(netstat -nultp|grep uwsgi) ]];then
+        echo "更新成功!"
+    else
+        echo "更新失败!"
+    fi
 else
     main
 fi
