@@ -9,7 +9,7 @@ from main.models.exts import db
 app = Flask(__name__)
 
 # 从config中加载配置文件内容 config上线模式 devConfig开发模式
-app.config.from_object("conf.flask.config.DevelopmentConfig")
+app.config.from_object("conf.flask.config.ProductionConfig")
 
 db.init_app(app)
 
