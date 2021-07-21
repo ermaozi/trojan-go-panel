@@ -10,6 +10,9 @@ YELLOW="33m"
 BLUE="36m"
 FUCHSIA="35m"
 
+# 项目地址 用户名/仓库名
+project="ermaozi/trojan-go-panel"
+
 colorEcho(){
     COLOR=$1
     echo -e "\033[${COLOR}${@:2}\033[0m"
@@ -35,7 +38,7 @@ checkSys() {
         PACKAGE_MANAGER='yum'
     else
         colorEcho $RED "不支持当前的操作系统！\nNot support OS! "
-        exit 1
+        return 1
     fi
 
     if [[ $worknode != 1 ]];then
@@ -43,20 +46,24 @@ checkSys() {
         read -p "请输入您解析到本机的域名: " input
         if [ ! $(echo "$input" | grep -E "[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+\.?") ];then
             colorEcho $YELLOW "域名不合法"
-            exit 1
+            return 1
         fi
         host_ip=$(curl "ipinfo.io/ip" 2> /dev/null)
         domain_ip=$(ping -c 2 $input | head -2 | tail -1 | awk '{print $5}' | sed 's/[(:)]//g')
         if [ x"$host_ip" != x"$domain_ip" ];then
             colorEcho $YELLOW "域名解析ip($domain_ip)与本机ip($host_ip)不同! 如果该域名曾配置CND, 请将其关闭"
-            exit 1
+            return 1
         fi
         DOMAIN=$input
         read -p "请输入您预设的数据库密码(自己设置, 自己记住): " input
         mysql_password=$input
 
         read -p "是否启用主节点trojan?(默认启用, 若需管控多个子节点, 则建议不启用主节点trojan)[Y/N]" input
-        is_local_trojan=$input
+        if [[ x"$input" == x"" ]];then
+            is_local_trojan="Y"
+        else
+            is_local_trojan=$input
+        fi
 
         mysql_server_addr=127.0.0.1
         mysql_database=local_trojan
@@ -100,7 +107,7 @@ initEvn(){
     mkdir -p /var/log/nginx/
     mkdir -p /etc/nginx/
 
-    git clone https://github.com/ermaozi/trojan-go-panel.git
+    git clone "https://github.com/${project}.git"
 
     cd ~/trojan-go-panel
 
@@ -232,6 +239,11 @@ installTrojanGo(){
     systemctl daemon-reload
 }
 
+check_flag=0
+check(){
+    netstat -nultp|grep $1 > /dev/null && colorEcho $GREEN $1运行正常 || colorEcho $RED $1未运行;check_flag=1
+}
+
 run(){
     echo "启动服务"
     setsebool -P httpd_can_network_connect 1
@@ -239,7 +251,15 @@ run(){
     systemctl enable nginx
     systemctl start trojan-go
     systemctl enable trojan-go
-    colorEcho $GREEN "服务启动成功!"
+    for my_service in trojan-go uwsgi nginx;do
+        check $my_service
+    done
+    if [[ $check_flag -eq 0 ]];then
+        colorEcho $GREEN "服务启动成功!"
+    else
+        colorEcho $RED "服务启动失败!"
+        return 1
+    fi
 }
 
 main(){
@@ -253,36 +273,27 @@ main(){
     installTls || return
     installTrojanGo || return
     run || return
+
     colorEcho $GREEN "全部安装完成!"
-    echo ""
-    echo "访问 http://${DOMAIN} 看看吧"
-    echo "首次登录需要注册账号, 第一个账号视为管理员, 记得好好保存"
+    if [[ $worknode != 1 ]];then
+        echo ""
+        echo "访问 http://${DOMAIN} 看看吧"
+        echo "首次登录需要注册账号, 第一个账号视为管理员, 记得好好保存"
+    fi
+
 }
 
-while [[ $# > 0 ]];do
-    KEY="$1"
-    case $KEY in
-        --worknode)
-            worknode=1
-            DOMAIN=$2
-            mysql_server_addr=$3
-            mysql_database=$4
-            mysql_password=$5
-            if [[ $# != 5 ]];then
-                echo "参数数量错误"
-                exit 1
-            fi
-            shift;;
-        -h|--help)
-            HELP=1
-            ;;
-        *)
-        ;;
-    esac
-    shift # past argument or value
-done
+update(){
 
-if [[ -d /root/trojan-go-panel/ ]];then
+    current_version=$(cat /root/trojan-go-panel/VERSION 2> /dev/null)
+    latest_version=$(curl https://raw.githubusercontent.com/${project}/main/VERSION 2> /dev/null)
+    if [ "$(echo "$current_version $latest_version" | tr " " "\n" | sort -rV | head -n 1)" == "$current_version" ];then
+        colorEcho $GREEN "已是最新版: $latest_version"
+        return
+    fi
+
+    colorEcho $GREEN "$current_version -> $latest_version"
+
     echo "拉取最新代码"
     cd /root/trojan-go-panel/
     git pull
@@ -311,6 +322,33 @@ if [[ -d /root/trojan-go-panel/ ]];then
     else
         echo "更新失败!"
     fi
+}
+
+while [[ $# > 0 ]];do
+    KEY="$1"
+    case $KEY in
+        --worknode)
+            worknode=1
+            DOMAIN=$2
+            mysql_server_addr=$3
+            mysql_database=$4
+            mysql_password=$5
+            if [[ $# != 5 ]];then
+                echo "参数数量错误"
+                exit 1
+            fi
+            shift;;
+        -h|--help)
+            HELP=1
+            ;;
+        *)
+        ;;
+    esac
+    shift
+done
+
+if [[ -d /root/trojan-go-panel/ ]];then
+    update
 else
     main
 fi
