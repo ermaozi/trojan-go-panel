@@ -1,3 +1,5 @@
+import os
+
 from main.libs.task import jobs
 """
     警告:
@@ -15,7 +17,7 @@ __all__ = ["PriProduction", "PriDevelopment", "PriTesting"]
 class Base(object):
     SECRET_KEY = 'flask_secret_key'  # 密钥, Flask 部分请求需要用到该密钥
 
-    DOMAIN = "MANAGE-DOMAIN"
+    DOMAIN = os.getenv('DOMAIN')
 
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     SQLALCHEMY_TRACK_MODIFICATIONS = True
@@ -31,8 +33,8 @@ class PriProduction(Base):
     DIALECT = 'mysql'  # 数据库语法, 本项目使用 mariadb, 属于 mysql 语法
     DRIVER = 'pymysql'  # 数据库链接工具, 本项目使用 pymysql
     USERNAME = 'root'  # 数据库用户名, 默认 root
-    PASSWORD = 'PRO-PASSWORD'  # 你的数据库密码
-    HOST = '127.0.0.1'  # 数据库地址, 默认 127.0.0.1, 若使用其他服务器, 请填写该服务器的公网 ip
+    PASSWORD = os.getenv('PRO-PASSWORD')  # 你的数据库密码
+    HOST = os.getenv('DOMAIN')  # 数据库地址, 默认 127.0.0.1, 若使用其他服务器, 请填写该服务器的公网 ip
     PORT = '3306'  # 数据库端口, 默认 3306
     DATABASE = 'main'  # 数据库名称
 
