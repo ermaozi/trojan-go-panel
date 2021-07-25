@@ -12,6 +12,7 @@ FUCHSIA="35m"
 
 # 项目地址 用户名/仓库名
 project="ermaozi/trojan-go-panel"
+branch="main_1.0.0"
 
 colorEcho(){
     COLOR=$1
@@ -24,10 +25,10 @@ checkSys() {
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
     # 安装前系统检查
-    [ $(id -u) != "0" ] && { colorEcho ${RED} "错误：您必须使用 root 用户来运行此脚本\nError: You must be root to run this script"; exit 1; }
+    [ $(id -u) != "0" ] && { colorEcho ${RED} "错误：您必须使用 root 用户来运行此脚本\nError: You must be root to run this script"; return 1; }
     if [[ $(uname -m 2> /dev/null) != x86_64 ]]; then
         colorEcho $YELLOW "请在 x86_64 架构的机器上运行此脚本\nPlease run this script on x86_64 machine"
-        exit 1
+        return 1
     fi
 
     if [[ `command -v apt-get` ]];then
@@ -79,25 +80,10 @@ checkSys() {
     ${PACKAGE_MANAGER} install -y socat
     ${PACKAGE_MANAGER} install -y lsof
     ${PACKAGE_MANAGER} install -y tar
-    ${PACKAGE_MANAGER} install -y nginx
     ${PACKAGE_MANAGER} install -y net-tools
     ${PACKAGE_MANAGER} install -y unzip
     ${PACKAGE_MANAGER} install -y git
-    ${PACKAGE_MANAGER} install -y python3
-    ${PACKAGE_MANAGER} install -y gcc
-    if [[ ${PACKAGE_MANAGER} != 'apt-get' ]];then
-        ${PACKAGE_MANAGER} install -y epel-release
-        ${PACKAGE_MANAGER} install -y xz-utils
-        ${PACKAGE_MANAGER} install -y 'Development Tools'  # 安装开发套件, 支撑软件运行环境
-        ${PACKAGE_MANAGER} install -y openssl-devel bzip2-devel libffi-devel  # 安装编译套件, 部分属于历史遗留问题, 后期会酌情删减
-        ${PACKAGE_MANAGER} install -y python36-devel  # uwsgi 的依赖, 必须要装, 否则可能导致 uwsgi 无法安装
-    else
-        ${PACKAGE_MANAGER} install -y python3-venv
-        ${PACKAGE_MANAGER} install -y build-essential
-        ${PACKAGE_MANAGER} install -y libncurses5-dev libncursesw5-dev libreadline6-dev
-        ${PACKAGE_MANAGER} install -y libgdbm-dev libsqlite3-dev libssl-dev
-        ${PACKAGE_MANAGER} install -y libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev
-    fi
+
     colorEcho $GREEN "依赖安装完成!"
 }
 
@@ -107,20 +93,25 @@ initEvn(){
     mkdir -p /var/log/nginx/
     mkdir -p /etc/nginx/
 
-    git clone "https://github.com/${project}.git"
+    PLANEL_DIR="/root/trojan-go-panel/"
 
-    cd ~/trojan-go-panel
+    CONFIG_DIR="$PLANEL_DIR/conf/"
 
-    CONFIGDIR=$(cd conf/;pwd)
+    SERVERJSON="$CONFIG_DIR/trojan-go/server.json"
+    TROJANSERVICE="$CONFIG_DIR/trojan-go/trojan-go.service"
+    NGINXCONF="$CONFIG_DIR/nginx/nginx.conf"
+    TROJANSQL="$CONFIG_DIR/sql/trojan-user.sql"
 
-    SERVERJSON="$CONFIGDIR/trojan-go/server.json"
-    TROJANSERVICE="$CONFIGDIR/trojan-go/trojan-go.service"
-    NGINXCONF="$CONFIGDIR/nginx/nginx.conf"
-    TROJANSQL="$CONFIGDIR/sql/trojan-user.sql"
+    SERVERJSON_DEFAULT="$CONFIG_DIR/trojan-go/server-default.json"
+    TROJANSERVICE_DEFAULT="$CONFIG_DIR/trojan-go/trojan-go-default.service"
+    NGINXCONF_DEFAULT="$CONFIG_DIR/nginx/nginx-default.conf"
 
-    SERVERJSON_DEFAULT="$CONFIGDIR/trojan-go/server-default.json"
-    TROJANSERVICE_DEFAULT="$CONFIGDIR/trojan-go/trojan-go-default.service"
-    NGINXCONF_DEFAULT="$CONFIGDIR/nginx/nginx-default.conf"
+    TROJANCONF="/etc/trojan-go/config.json"
+    SYSTEMDPREFIX=/etc/systemd/system
+    SYSTEMDPATH="$SYSTEMDPREFIX/trojan-go.service"
+
+    cert_path="/root/.acme.sh/${DOMAIN}_ecc/fullchain.cer"
+    key_path="/root/.acme.sh/${DOMAIN}_ecc/${DOMAIN}.key"
 
     cp $NGINXCONF /etc/nginx/nginx.conf
     sed -i "s#my_domain#$DOMAIN#" /etc/nginx/nginx.conf
@@ -154,25 +145,27 @@ installMaria(){
 installPanel(){
     echo "开始安装面板与配置文件"
 
-    cd ~/trojan-go-panel/
-    python3 -m venv venv
-    source ./venv/bin/activate
+    git clone "https://github.com/${project}.git" -b $branch
+
+    cd $PLANEL_DIR
+
     if [[ $worknode != 1 ]];then
-        pip install -r requirements_manage.txt
+        # pip install -r requirements_manage.txt
 
-        cp conf/flask/private/private_template.py conf/flask/__private__.py
-        cp conf/flask/private/setting_template.yaml conf/flask/__setting__.yaml
+        cp $CONFIG_DIR/flask/private/private_template.py $CONFIG_DIR/flask/__private__.py
+        cp $CONFIG_DIR/flask/private/setting_template.yaml $CONFIG_DIR/flask/__setting__.yaml
 
-        sed -i "s#PRO-PASSWORD#$mysql_password#" conf/flask/__private__.py
-        sed -i "s#MANAGE-DOMAIN#$DOMAIN#" conf/flask/__private__.py
-        sed -i "s#flask_secret_key#$(cat /proc/sys/kernel/random/uuid)#" conf/flask/__private__.py
+        sed -i "s#PRO-PASSWORD#$mysql_password#" $CONFIG_DIR/flask/__private__.py
+        sed -i "s#MANAGE-DOMAIN#$DOMAIN#" $CONFIG_DIR/flask/__private__.py
+        sed -i "s#flask_secret_key#$(cat /proc/sys/kernel/random/uuid)#" $CONFIG_DIR/flask/__private__.py
         sed -i "s#http://127.0.0.1:8000#http://$DOMAIN#" web/static/config.js
 
         if [[ "Nn" =~ "$is_local_trojan" ]];then
-             sed -i "s#is_local_trojan: true#is_local_trojan: false#" conf/flask/__setting__.yaml
+             sed -i "s#is_local_trojan: true#is_local_trojan: false#" $CONFIG_DIR/flask/__setting__.yaml
         fi
 
-        uwsgi --ini ./conf/uwsgi/uwsgi-manage.ini
+        docker build -t trojan-go-panel .
+        docker run -p 80:8080 -d trojan-go-panel --name trojan
     else
         pip install -r requirements_worknode.txt
         uwsgi --ini ./conf/uwsgi/uwsgi-worknode.ini
@@ -197,7 +190,12 @@ installTls(){
     [ -f ~/.acme.sh/acme.sh ] || curl  https://get.acme.sh | sh
     ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
     bash /root/.acme.sh/acme.sh --issue -d $DOMAIN --debug --standalone --keylength ec-256
-    colorEcho $GREEN "证书安装成功!"
+    if [[ -d $cert_path ]] && [[ $key_path ]];then
+        colorEcho $GREEN "证书安装成功!"
+    else
+        colorEcho $RED "证书安装失败！"
+        return 1
+    fi
 }
 
 # 安装 trojan-go
@@ -205,15 +203,6 @@ installTrojanGo(){
     echo "开始安装trojan"
     mkdir trojan
     cd trojan
-    INSTALLPREFIX="/usr/bin/trojan-go"
-
-    TROJANCONF="/etc/trojan-go/config.json"
-
-    SYSTEMDPREFIX=/etc/systemd/system
-    SYSTEMDPATH="$SYSTEMDPREFIX/trojan-go.service"
-
-    cert_path="/root/.acme.sh/${DOMAIN}_ecc/fullchain.cer"
-    key_path="/root/.acme.sh/${DOMAIN}_ecc/${DOMAIN}.key"
 
     CHECKVERSION="https://api.github.com/repos/p4gefau1t/trojan-go/releases"
     VERSION=$(curl -H 'Cache-Control: no-cache' -s "$CHECKVERSION" 2> /dev/null| grep 'tag_name' | cut -d\" -f4 | sed 's/v//g' | head -n 1)
@@ -239,30 +228,30 @@ installTrojanGo(){
     systemctl daemon-reload
 }
 
-check_flag=0
-check(){
-    netstat -nultp|grep $1 > /dev/null && colorEcho $GREEN $1运行正常 || colorEcho $RED $1未运行;check_flag=1
-}
+# check_flag=0
+# check(){
+#     netstat -nultp|grep $1 > /dev/null && colorEcho $GREEN $1运行正常 || colorEcho $RED $1未运行;check_flag=1
+# }
 
-run(){
-    echo "启动服务"
-    setsebool -P httpd_can_network_connect 1
-    systemctl start nginx
-    systemctl enable nginx
-    systemctl start trojan-go
-    systemctl enable trojan-go
-    for my_service in trojan-go uwsgi nginx;do
-        check $my_service
-    done
-    if [[ $check_flag -eq 0 ]];then
-        colorEcho $GREEN "服务启动成功!"
-    else
-        colorEcho $RED "服务启动失败!"
-        return 1
-    fi
-}
+# run(){
+#     echo "启动服务"
+#     setsebool -P httpd_can_network_connect 1
+#     systemctl start nginx
+#     systemctl enable nginx
+#     systemctl start trojan-go
+#     systemctl enable trojan-go
+#     for my_service in trojan-go uwsgi nginx;do
+#         check $my_service
+#     done
+#     if [[ $check_flag -eq 0 ]];then
+#         colorEcho $GREEN "服务启动成功!"
+#     else
+#         colorEcho $RED "服务启动失败!"
+#         return 1
+#     fi
+# }
 
-main(){
+install(){
     cd "/root"
     checkSys || return
     initEvn || return
@@ -272,7 +261,7 @@ main(){
     installPanel || return
     installTls || return
     installTrojanGo || return
-    run || return
+    # run || return
 
     colorEcho $GREEN "全部安装完成!"
     if [[ $worknode != 1 ]];then
@@ -283,10 +272,14 @@ main(){
 
 }
 
+uninstall(){
+    echo 111
+}
+
 update(){
 
     current_version=$(cat /root/trojan-go-panel/VERSION 2> /dev/null)
-    latest_version=$(curl https://raw.githubusercontent.com/${project}/main/VERSION 2> /dev/null)
+    latest_version=$(curl https://raw.githubusercontent.com/${project}/${branch}/VERSION 2> /dev/null)
     if [ "$(echo "$current_version $latest_version" | tr " " "\n" | sort -rV | head -n 1)" == "$current_version" ];then
         colorEcho $GREEN "已是最新版: $latest_version"
         return
@@ -335,9 +328,16 @@ while [[ $# > 0 ]];do
             mysql_password=$5
             if [[ $# != 5 ]];then
                 echo "参数数量错误"
-                exit 1
+                return 1
             fi
             shift;;
+        --uninstall)
+            uninstall
+            ;;
+        --reinstall)
+            uninstall
+            install
+            ;;
         -h|--help)
             HELP=1
             ;;
@@ -350,6 +350,6 @@ done
 if [[ -d /root/trojan-go-panel/ ]];then
     update
 else
-    main
+    install
 fi
 
