@@ -12,7 +12,7 @@ import uuid
 import json
 
 
-__all__ = ["AddNode", "GetNodeStatus", "GetNodeStatus"]
+__all__ = ["Node", "DelNode", "GetNodeStatus"]
 
 
 data_dict = {}
@@ -46,6 +46,9 @@ class Node(MethodView):
 
     @login_required(constant.PERMISSION_LEVEL_4)
     def get(self):
+        """
+        获取所有节点信息(不包含节点硬件信息)
+        """
         node_api = NodeInfoTable()
         node_list = node_api.get_all_node_list()
         data = {}
@@ -57,6 +60,9 @@ class Node(MethodView):
 class DelNode(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
     def post(self):
+        """
+        删除节点
+        """
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
         node_name = data["node_name"]
@@ -70,6 +76,9 @@ class DelNode(MethodView):
 class GetNodeStatus(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
     def post(self):
+        """
+        多线程获取节点状态
+        """
         datas = request.get_data()
         datas = json.loads(datas.decode("UTF-8"))
         thread_list = []
@@ -84,6 +93,9 @@ class GetNodeStatus(MethodView):
 
 
 def get_node_info(domain):
+    """
+    获取节点状态
+    """
     data = {}
     data["node_status"] = {}
     if domain == "localhost":

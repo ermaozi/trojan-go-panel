@@ -1,4 +1,5 @@
 venv/
+migrations/
 .vscode/
 __pycache__/
 *.pyc

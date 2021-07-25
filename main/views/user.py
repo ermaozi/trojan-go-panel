@@ -103,6 +103,9 @@ class User(MethodView):
 
     @login_required(constant.PERMISSION_LEVEL_4)
     def get(self):
+        """
+        获取所有用户信息
+        """
         user_api = UserTable()
         user_node_api = UserNodesTable()
         node_api = NodeInfoTable()
@@ -115,11 +118,13 @@ class User(MethodView):
             expiry_date = i.get("expiry_date")
             data["username"] = username
             data["user_permission"] = i.get("user_permission")
+            # 获取用户限制
             data["quota"] = "无限制" if quota == -1 else quota
             data["expiry_date"] = expiry_date.strftime(
                 '%Y-%m-%d') if expiry_date else "永久"
+            # 获取用户正在使用的节点
             data["nodes"] = user_node_api.get_node_for_user_name(username)
-
+            # 获取用户流量使用状态
             upload, download, total = user_api.get_user_use(
                 username, data["nodes"])
             data["upload"] = bytes2human(upload)
@@ -142,6 +147,9 @@ class User(MethodView):
 
     @login_required(constant.PERMISSION_LEVEL_4)
     def put(self):
+        """
+        修改用户信息
+        """
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
         user_name = data["username"]
@@ -164,29 +172,36 @@ class User(MethodView):
             user_data["quota"] = -1
         user_api.set_user(user_name, user_data)
 
+        # 用户正在使用的节点
         exist_node_set = set(user_node_api.get_node_for_user_name(user_name))
+        # 所有节点
         all_node_set = set(
             [i["node_name"] for i in node_api.get_all_node_list()])
+        # 修改后的用户节点
         node_set = set(node_list)
+        # 用户未使用的节点(所有节点与已使用节点取差集)
         available_node_set = all_node_set - exist_node_set
+        # 需要新增的节点(未使用节点与修改后的节点取并集)
         insert_list = list(available_node_set & node_set)
+        # 需要删除的节点(正在使用的节点与修改后的节点取差集)
         del_list = list(exist_node_set - node_set)
 
+        # 添加节点
         insert_data_list = [{
             "user_name": user_name,
             "node_name": node,
             "node_pwd": create_random_str(8, 16)
         } for node in insert_list]
         user_node_api.add_user_node(insert_data_list)
-
+        # 删除节点
         del_data_list = [{
             "user_name": user_name,
             "node_name": node
         } for node in del_list]
         user_node_api.del_user_node(del_data_list)
 
+        # 如果节点有变动则重新计算用户限制
         all_set_node = del_data_list + insert_data_list
-
         for node in all_set_node:
             node_name = node["node_name"]
             node_usernumber = len(
@@ -201,7 +216,9 @@ class User(MethodView):
 class DelUser(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
     def post(self):
-
+        """
+        删除用户
+        """
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
         user_name = data["username"]
@@ -223,6 +240,10 @@ class DelUser(MethodView):
 class GetTrojanUrl(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
     def get(self):
+        """
+        获取用户的trojan链接与订阅链接
+        clash订阅链接交给前端处理, 在普通订阅链接后面添加'&t=clash'
+        """
         user_name = request.args["0"]
 
         user_api = UserTable()
@@ -255,6 +276,9 @@ class GetTrojanUrl(MethodView):
 class Subscribe(MethodView):
     @login_required(constant.PERMISSION_LEVEL_4)
     def post(self):
+        """
+        通过修改用户表'subscribe_pwd'重置订阅链接
+        """
         data = request.get_data()
         data = json.loads(data.decode("UTF-8"))
         user_name = data["username"]
@@ -279,6 +303,9 @@ class Subscribe(MethodView):
         return base64.b64encode(nodes_str.encode("utf-8"))
 
     def get(self):
+        """
+        返回订阅内容
+        """
         rsp = dict(request.args)
         user_name = rsp["u"]
         subscribe_pwd = rsp["p"]
@@ -290,14 +317,15 @@ class Subscribe(MethodView):
 
         content = ""
 
+        # 订阅连接中u参数为user_name, 若用户名不存在则返回假数据
         if not user_api.username_if_exist(user_name):
             content = self.generating_fake_data()
             response = Response(content,
                                 content_type="text/plain;charset=utf-8")
             return response
 
+        # 订阅连接中p参数为subscribe_pwd, 若subscribe_pwd与用户名不匹配则返回假数据
         v_subscribe_pwd = user_api.get_user(user_name)["subscribe_pwd"]
-
         if subscribe_pwd != v_subscribe_pwd:
             content = self.generating_fake_data()
             response = Response(content,
@@ -307,8 +335,8 @@ class Subscribe(MethodView):
         try:
             node_info_list = user_node_api.get_node_info_for_user_name(
                 user_name)
-
             if subscribe_type == "clash":
+                # 若t参数(type)为clash则返回clash配置
                 clash_list = []
                 clash_name_list = []
                 for node_info in node_info_list:
@@ -347,6 +375,7 @@ class Subscribe(MethodView):
                 ]
                 content = yaml.dump(yaml_obj)
             else:
+                # 若t参数(type)为空则返回通常配置
                 trojan_urls = []
                 for node_info in node_info_list:
                     trojan_clash = {}

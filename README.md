@@ -29,7 +29,7 @@ trojan-go 多用户多节点管理面板
 
 ## 展示
 
-地址: [demo.ermao.net](http://demo.ermao.net)
+地址: [demo.emzvpn.xyz](http://demo.emzvpn.xyz/)
 
 用户: admin
 
