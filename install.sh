@@ -83,6 +83,8 @@ checkSys() {
     ${PACKAGE_MANAGER} install -y net-tools
     ${PACKAGE_MANAGER} install -y unzip
     ${PACKAGE_MANAGER} install -y git
+    ${PACKAGE_MANAGER} install -y openssl
+    ${PACKAGE_MANAGER} install -y nginx
 
     colorEcho $GREEN "依赖安装完成!"
 }
@@ -124,18 +126,16 @@ installMaria(){
     systemctl enable docker.service
 
     # 检查是否存在 mariadb 容器
-    echo "开始安装 mariadb"
-    if [[ $(docker ps --format "{{.Names}}"|grep mariadb) ]];then
-        colorEcho $YELLOW  "mariadb 数据库已存在, 请自行创建 trojan 数据库"
-        return
+    if [[ !$(docker ps --format "{{.Names}}"|grep mariadb) ]];then
+        echo "开始安装 mariadb"
+        docker pull mariadb  # 拉取超时可多试几次, 镜像拉取成功后可以通过 docker images 命令进行查看
+        mkdir -p /data/mariadb/data  # 创建数据存储目录
+        kill -9 $(lsof -i:3306 -t)  # 杀死 3306 端口
+        docker run --name mariadb -p 3306:3306 -e MYSQL_ROOT_PASSWORD=$mysql_password -v /data/mariadb/data:/var/lib/mysql -d mariadb
+        docker container update --restart=always mariadb  # 设置容器自启动
+        docker restart mariadb -t 20  # 部分场景 mariadb 容器不会自启动, 这里重启一下
+        sleep 10s
     fi
-    docker pull mariadb  # 拉取超时可多试几次, 镜像拉取成功后可以通过 docker images 命令进行查看
-    mkdir -p /data/mariadb/data  # 创建数据存储目录
-    kill -9 $(lsof -i:3306 -t)  # 杀死 3306 端口
-    docker run --name mariadb -p 3306:3306 -e MYSQL_ROOT_PASSWORD=$mysql_password -v /data/mariadb/data:/var/lib/mysql -d mariadb
-    docker container update --restart=always mariadb  # 设置容器自启动
-    docker restart mariadb -t 20  # 部分场景 mariadb 容器不会自启动, 这里重启一下
-    sleep 10s
     docker exec mariadb mysql -uroot -p$mysql_password -e "create database main;"
     docker exec mariadb mysql -uroot -p$mysql_password -e "create database $mysql_database;"
     cp $TROJANSQL /data/mariadb/data/
@@ -255,11 +255,11 @@ install(){
     cd "/root"
     checkSys || return
     initEvn || return
+    installTls || return
     if [[ $worknode != 1 ]];then
         installMaria || return
     fi
     installPanel || return
-    installTls || return
     installTrojanGo || return
     # run || return
 
