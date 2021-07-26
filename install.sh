@@ -241,7 +241,12 @@ installTrojanGo(){
 
 check_flag=0
 check(){
-    netstat -nultp|grep $1 > /dev/null && colorEcho $GREEN $1运行正常 || colorEcho $RED $1未运行;check_flag=1
+    if [[ $(netstat -nultp|grep $1 > /dev/null) ]];then
+        colorEcho $GREEN $1运行正常
+    else
+        colorEcho $RED $1未运行
+        check_flag=1
+    fi
 }
 
 run(){
