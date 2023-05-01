@@ -1,4 +1,4 @@
-Flask==1.1.4
+Flask==2.3.2
 Flask-Migrate==2.7.0
 Flask_Script==2.0.6
 Flask-Bcrypt==0.7.1
